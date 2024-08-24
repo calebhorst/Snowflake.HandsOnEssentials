@@ -17,3 +17,36 @@ Go to github.com to start. Choose the Free Account if that is your preference.
 */
 
 -- 🥋 Create a New Repo in Your GitHub Account (Required)
+/*
+📓 Changes Needed When Moving from SiS to SniS
+The biggest differences between SiS and SniS are: 
+
+1) How users connect to your app.  
+2) How you connect your app to Snowflake. 
+
+With SniS, users will be able to connect to your app more easily. You can set up your SniS app in a way that doesn't require them to log in or have a USER in your Snowflake account. In fact, Streamlit will host your app for free if you make it open to the public. 
+
+Connecting your app to Snowflake is less easy in SniS than it was in SiS. In SiS, the connection happened automatically. In Streamlit, we'll need to carry out a number of steps. 
+
+We'll begin by making a few changes to the streamlit_app.py file in your GitHub Repo. 
+
+DO NOT EXPECT THE APP TO WORK RIGHT AFTER THESE CHANGES. WE HAVE NOT SET UP A STREAMLIT ACCOUNT YET AND WE HAVE NOT ASKED YOU TO RUN THE APP YET. 
+
+🥋 Make Updates to the streamlit_app.py File
+DO NOT EXPECT THE APP TO WORK RIGHT AFTER THESE CHANGES. WE HAVE NOT SET UP A STREAMLIT ACCOUNT YET AND WE HAVE NOT ASKED YOU TO RUN THE APP YET. 
+
+🎯 Edit the requirements.txt File
+Modify it so it looks like this: 
+
+DO NOT EXPECT THE APP TO WORK RIGHT AFTER THESE CHANGES. WE HAVE NOT SET UP A STREAMLIT ACCOUNT YET AND WE HAVE NOT ASKED YOU TO RUN THE APP YET.  YOU ARE JUST TRANSITIONING THE CODE FROM INSIDE SNOWFLAKE TO OUTSIDE OF SNOWFLAKE IN THESE FEW LABS. */
+
+--🧰 Set Up a Streamlit Account and Give It Access to Your GitHub Account
+--https://streamlit.io
+
+/*
+📓 Rinse & Repeat
+Because the process of making change and viewing the changes repeats over and over, we will not show every step in the process. Instead, we'll show code changes and the results you can expect to see.
+
+Click the edit button. Make Edits. Commit changes. Switch tabs. View results. Switch back. 
+Here is an example of another Streamlit App (not our project) and the workflow between GitHub and Streamlit.  We will put this into action using our project in the next lesson.
+*/
