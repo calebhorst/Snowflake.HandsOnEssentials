@@ -89,3 +89,29 @@ If you get stuck, don't worry, you will be able to see the code we used on upcom
 
 NOTE: This is a challenge lab and it is supposed to be challenging. Notice we don't give you complete instructions. We want you to bridge gaps and apply prior learning. We want you to be proud of what you are able to piece together on your own. We have carefully designed this challenge to give you just enough information that you can be successful, but you will also have to show some initiative. 
 */
+
+alter table smoothies.public.orders add column order_filled boolean default false;
+
+select *
+from smoothies.public.orders
+;
+
+update smoothies.public.orders
+set order_filled = true
+where name_on_order is null
+;
+
+-- Set your worksheet drop lists
+use util_db.public;
+-- DO NOT EDIT ANYTHING BELOW THIS LINE
+select GRADER(step, (actual = expected), actual, expected, description) as graded_results from (
+  SELECT 'DABW004' as step
+ ,( select count(*) from smoothies.information_schema.columns
+    where table_schema = 'PUBLIC' 
+    and table_name = 'ORDERS'
+    and column_name = 'ORDER_FILLED'
+    and column_default = 'FALSE'
+    and data_type = 'BOOLEAN') as actual
+ , 1 as expected
+ ,'Order Filled is Boolean' as description
+);
