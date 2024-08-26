@@ -1,69 +1,73 @@
 -- Create a Table Raw JSON Data
 // JSON DDL Scripts
-use database library_card_catalog;
-use role sysadmin;
+USE DATABASE library_card_catalog;
+USE ROLE sysadmin;
 
 // Create an Ingestion Table for JSON Data
-create table library_card_catalog.public.author_ingest_json
+CREATE TABLE library_card_catalog.public.author_ingest_json
 (
-  raw_author variant
+  raw_author VARIANT
 );
 
 -- Create a File Format to Load the JSON Data
 -- DO NOT USE QUOTES around TRUE and FALSE values. These are boolean, not strings.
 
 //Create File Format for JSON Data 
-create file format library_card_catalog.public.json_file_format
-    type = 'JSON' 
-    compression = 'AUTO' 
-    enable_octal = FALSE
-    allow_duplicate = FALSE 
-    strip_outer_array = true
-    strip_null_values = FALSE 
-    ignore_utf8_errors = FALSE
+CREATE FILE FORMAT library_card_catalog.public.json_file_format
+TYPE = 'JSON' 
+COMPRESSION = 'AUTO' 
+ENABLE_OCTAL = FALSE
+ALLOW_DUPLICATE = FALSE 
+STRIP_OUTER_ARRAY = TRUE
+STRIP_NULL_VALUES = FALSE 
+IGNORE_UTF8_ERRORS = FALSE
 ; 
  
 -- Load the Data into the New Table, Using the File Format You Created
-use role accountadmin;
-select $1
-from @util_db.public.my_internal_stage/author_with_header.json
-(file_format => library_card_catalog.public.json_file_format)
+USE ROLE accountadmin;
+SELECT $1
+FROM
+  @util_db.public.my_internal_stage/author_with_header.json
+  (FILE_FORMAT => library_card_catalog.public.json_file_format)
 ;
 
-copy into library_card_catalog.public.author_ingest_json
-from @util_db.public.my_internal_stage
-files = ( 'author_with_header.json')
-file_format = ( format_name=library_card_catalog.public.json_file_format )
+COPY INTO library_card_catalog.public.author_ingest_json
+FROM @util_db.public.my_internal_stage
+FILES = ( 'author_with_header.json')
+FILE_FORMAT = ( FORMAT_NAME=library_card_catalog.public.json_file_format )
 ;    
 
 -- View the JSON Rows
-select raw_author
-from author_ingest_json
+SELECT raw_author
+FROM author_ingest_json
 ;
 
 -- Query the JSON Data
 //returns AUTHOR_UID value from top-level object's attribute
-select raw_author:AUTHOR_UID
-from author_ingest_json;
+SELECT raw_author:AUTHOR_UID
+FROM author_ingest_json;
 
 //returns the data in a way that makes it look like a normalized table
 SELECT 
- raw_author:AUTHOR_UID
-,raw_author:FIRST_NAME::STRING as FIRST_NAME
-,raw_author:MIDDLE_NAME::STRING as MIDDLE_NAME
-,raw_author:LAST_NAME::STRING as LAST_NAME
-FROM AUTHOR_INGEST_JSON;
+  raw_author:AUTHOR_UID,
+  raw_author:FIRST_NAME::STRING AS first_name,
+  raw_author:MIDDLE_NAME::STRING AS middle_name,
+  raw_author:LAST_NAME::STRING AS last_name
+FROM author_ingest_json;
 
 -- Set your worksheet drop lists. DO NOT EDIT THE DORA CODE.
-use role accountadmin;
-use util_db.public;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from
-(
-  SELECT 'DWW16' as step
-  ,( select row_count 
-    from LIBRARY_CARD_CATALOG.INFORMATION_SCHEMA.TABLES 
-    where table_name = 'AUTHOR_INGEST_JSON') as actual
-  ,6 as expected
-  ,'Check number of rows' as description
- ); 
+USE ROLE accountadmin;
+USE util_db.public;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT
+      'DWW16' AS step,
+      (
+        SELECT row_count 
+        FROM library_card_catalog.information_schema.tables 
+        WHERE table_name = 'AUTHOR_INGEST_JSON'
+      ) AS actual,
+      6 AS expected,
+      'Check number of rows' AS description
+  ); 
 

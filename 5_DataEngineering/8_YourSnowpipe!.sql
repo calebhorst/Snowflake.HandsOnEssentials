@@ -8,28 +8,28 @@ Go Ahead! Run the code below!!
 */
 
 -- 🥋 Create Your Snowpipe!
-use role sysadmin;
-use AGS_GAME_AUDIENCE.RAW;
+USE ROLE sysadmin;
+USE ags_game_audience.raw;
 
-truncate table ED_PIPELINE_LOGS;
+TRUNCATE TABLE ed_pipeline_logs;
 
-CREATE OR REPLACE PIPE PIPE_GET_NEW_FILES
-auto_ingest=true
-aws_sns_topic='arn:aws:sns:us-west-2:321463406630:dngw_topic'
+CREATE OR REPLACE PIPE pipe_get_new_files
+AUTO_INGEST=TRUE
+AWS_SNS_TOPIC='arn:aws:sns:us-west-2:321463406630:dngw_topic'
 AS 
-COPY INTO ED_PIPELINE_LOGS
+COPY INTO ed_pipeline_logs
 FROM (
-    SELECT 
-    METADATA$FILENAME as log_file_name 
-  , METADATA$FILE_ROW_NUMBER as log_file_row_id 
-  , current_timestamp(0) as load_ltz 
-  , get($1,'datetime_iso8601')::timestamp_ntz as DATETIME_ISO8601
-  , get($1,'user_event')::text as USER_EVENT
-  , get($1,'user_login')::text as USER_LOGIN
-  , get($1,'ip_address')::text as IP_ADDRESS    
+  SELECT 
+    metadata$filename AS log_file_name,
+    metadata$file_row_number AS log_file_row_id,
+    CURRENT_TIMESTAMP(0) AS load_ltz,
+    GET($1,'datetime_iso8601')::TIMESTAMP_NTZ AS datetime_iso8601,
+    GET($1,'user_event')::TEXT AS user_event,
+    GET($1,'user_login')::TEXT AS user_login,
+    GET($1,'ip_address')::TEXT AS ip_address    
   FROM @AGS_GAME_AUDIENCE.RAW.UNI_KISHORE_PIPELINE
 )
-file_format = (format_name = ff_json_logs);
+FILE_FORMAT = (FORMAT_NAME = ff_json_logs);
 
 /*
 📓  Our Event-Driven Pipeline Progress
@@ -50,67 +50,69 @@ Edit the "r" SELECT definition to what you think it should be. Run it alone by h
 
 Next, you can highlight from the word MERGE, to the end and run the MERGE. It's okay if it doesn't load any rows - as long as it doesn't give you an error, you should be fine. Simply run the full statement to replace the Task with the new version, then go in and resume the task. (remember to edit it so it runs every 5 minutes instead of as a triggered task). 
 */
-truncate table enhanced.LOGS_ENHANCED;
+TRUNCATE TABLE enhanced.logs_enhanced;
 
-alter task ags_game_audience.raw.get_new_files suspend;
-alter task ags_game_audience.raw.LOAD_LOGS_ENHANCED suspend;
+ALTER TASK ags_game_audience.raw.get_new_files SUSPEND;
+ALTER TASK ags_game_audience.raw.load_logs_enhanced SUSPEND;
 
 
-create or replace task ags_game_audience.raw.LOAD_LOGS_ENHANCED
-warehouse='COMPUTE_WH'
-schedule='5 minute'
-as
-MERGE INTO ENHANCED.LOGS_ENHANCED e
-USING (
-    SELECT logs.ip_address 
-    , logs.user_login as GAMER_NAME
-    , logs.user_event as GAME_EVENT_NAME
-    , logs.datetime_iso8601 as GAME_EVENT_UTC
-    , city
-    , region
-    , country
-    , timezone as GAMER_LTZ_NAME
-    , CONVERT_TIMEZONE( 'UTC',timezone,logs.datetime_iso8601) as game_event_ltz
-    , DAYNAME(game_event_ltz) as DOW_NAME
-    , TOD_NAME
-    from ags_game_audience.raw.ED_PIPELINE_LOGS logs
-    JOIN ipinfo_geoloc.demo.location loc ON ipinfo_geoloc.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
+CREATE OR REPLACE TASK ags_game_audience.raw.load_logs_enhanced
+  warehouse='COMPUTE_WH'
+  SCHEDULE='5 minute'
+AS
+  MERGE INTO enhanced.logs_enhanced ASe
+  USING (
+    SELECT
+      logs.ip_address,
+      logs.user_login AS gamer_name,
+      logs.user_event AS game_event_name,
+      logs.datetime_iso8601 AS game_event_utc,
+      city,
+      region,
+      country,
+      timezone AS gamer_ltz_name,
+      CONVERT_TIMEZONE( 'UTC',timezone,logs.datetime_iso8601) AS game_event_ltz,
+      DAYNAME(game_event_ltz) AS dow_name,
+      tod_name
+    FROM ags_game_audience.raw.ed_pipeline_logs ASlogs
+    INNER JOIN ipinfo_geoloc.demo.location ASloc
+      ON ipinfo_geoloc.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
       AND ipinfo_geoloc.public.TO_INT(logs.ip_address) BETWEEN start_ip_int AND end_ip_int
-    JOIN ags_game_audience.raw.TIME_OF_DAY_LU tod ON HOUR(game_event_ltz) = tod.hour
-) r
-ON r.GAMER_NAME = e.GAMER_NAME
-and r.GAME_EVENT_UTC = e.game_event_utc
-and r.GAME_EVENT_NAME = e.game_event_name
-WHEN NOT MATCHED THEN
-insert (
-    ip_address
-    ,gamer_name
-    ,game_event_name
-    ,game_event_utc
-    ,city
-    ,region
-    ,country
-    ,gamer_ltz_name
-    ,game_event_ltz
-    ,dow_name
-    ,tod_name
-)
-values (
-    ip_address
-    ,gamer_name
-    ,game_event_name
-    ,game_event_utc
-    ,city
-    ,region
-    ,country
-    ,gamer_ltz_name
-    ,game_event_ltz
-    ,dow_name
-    ,tod_name
-)
+    INNER JOIN ags_game_audience.raw.time_of_day_lu AStod ON HOUR(game_event_ltz) = tod.hour
+  ) ASr
+    ON r.gamer_name = e.gamer_name
+    AND r.game_event_utc = e.game_event_utc
+    AND r.game_event_name = e.game_event_name
+  WHEN NOT MATCHED THEN
+    INSERT (
+      ip_address,
+      gamer_name,
+      game_event_name,
+      game_event_utc,
+      city,
+      region,
+      country,
+      gamer_ltz_name,
+      game_event_ltz,
+      dow_name,
+      tod_name
+    )
+    VALUES (
+      ip_address,
+      gamer_name,
+      game_event_name,
+      game_event_utc,
+      city,
+      region,
+      country,
+      gamer_ltz_name,
+      game_event_ltz,
+      dow_name,
+      tod_name
+    )
 ;
 
-alter task ags_game_audience.raw.LOAD_LOGS_ENHANCED resume;
+ALTER TASK ags_game_audience.raw.load_logs_enhanced RESUME;
 
 /*
 By viewing our COPY HISTORY, we can confirm that our Snowpipe is being triggered and is processing the new files to load the new rows of data. 
@@ -119,19 +121,22 @@ There's also a TASK HISTORY page in the same area. Check that out, as well!!
 
 If it seems like your Snowpipe is not active you can run some commands to check things and get them going again.
 */
-use role accountadmin;
-select 
-    file_name, error_count, status, last_load_time 
-from snowflake.account_usage.copy_history
-order by last_load_time desc
-limit 10;
+USE ROLE accountadmin;
+SELECT 
+  file_name,
+  error_count,
+  status,
+  last_load_time 
+FROM snowflake.account_usage.copy_history
+ORDER BY last_load_time DESC
+LIMIT 10;
 
 --Use this command if your Snowpipe seems like it is stalled out:
 
-ALTER PIPE ags_game_audience.raw.PIPE_GET_NEW_FILES REFRESH;
+ALTER PIPE ags_game_audience.raw.pipe_get_new_files REFRESH;
 
 --Use this command if you want to check that your pipe is running:
-select parse_json(SYSTEM$PIPE_STATUS( 'ags_game_audience.raw.PIPE_GET_NEW_FILES' ));
+SELECT PARSE_JSON(system$pipe_status( 'ags_game_audience.raw.PIPE_GET_NEW_FILES' ));
 /*
 📓 Fully Event-Driven?
 You probably noticed that our new Pipe did not make our entire pipeline "event driven."
@@ -153,16 +158,16 @@ Let's start by adding the STREAM.
 
 -- 🥋 Create a Stream
 --create a stream that will keep track of changes to the table
-use role sysadmin;
-create or replace stream ags_game_audience.raw.ed_cdc_stream 
-on table AGS_GAME_AUDIENCE.RAW.ED_PIPELINE_LOGS;
+USE ROLE sysadmin;
+CREATE OR REPLACE STREAM ags_game_audience.raw.ed_cdc_stream 
+ON TABLE ags_game_audience.raw.ed_pipeline_logs;
 
 --look at the stream you created
-show streams;
+SHOW STREAMS;
 
 --check to see if any changes are pending (expect FALSE the first time you run it)
 --after the Snowpipe loads a new file, expect to see TRUE
-select system$stream_has_data('ed_cdc_stream');
+SELECT system$stream_has_data('ed_cdc_stream');
 
 /*
 🎯 Suspend the LOAD_LOGS_ENHANCED Task
@@ -170,7 +175,7 @@ The LOAD_LOGS_ENHANCED task we've been using looks at EVERY row and checks to se
 
 We'll be creating a new MERGE task that is more efficient, so SUSPEND the LOAD_LOGS_ENHANCED task right now -- we won't need it again.
 */
-alter task raw.LOAD_LOGS_ENHANCED suspend;
+ALTER TASK raw.load_logs_enhanced SUSPEND;
 
 /*
 📓 Streams Can Be VERY Complex - Ours is Simple
@@ -179,25 +184,25 @@ In the simplest use, streams appear very simple. They are just a running list of
 We're only covering the most basic use of a stream, one that will only handle record inserts and will not be guaranteed to track and process every change. 
 */
 
-use role accountadmin;
+USE ROLE accountadmin;
 SELECT *
 FROM snowflake.account_usage.task_history
 ORDER BY completed_time DESC
 LIMIT 100;
 
-show tasks;
+SHOW TASKS;
 
 
 -- 🥋 View Our Stream Data
 --query the stream
-select * 
-from ags_game_audience.raw.ed_cdc_stream; 
+SELECT * 
+FROM ags_game_audience.raw.ed_cdc_stream; 
 
 --check to see if any changes are pending
-select system$stream_has_data('ed_cdc_stream');
+SELECT system$stream_has_data('ed_cdc_stream');
 
 --if your stream remains empty for more than 10 minutes, make sure your PIPE is running
-select SYSTEM$PIPE_STATUS('PIPE_GET_NEW_FILES');
+SELECT SYSTEM$PIPE_STATUS('PIPE_GET_NEW_FILES');
 
 --if you need to pause or unpause your pipe
 --alter pipe PIPE_GET_NEW_FILES set pipe_execution_paused = true;
@@ -210,49 +215,54 @@ We'll use the records in our STREAM to insert new records into the LOGS_ENHANCED
 
 -- 🥋 Process the Rows from the Stream
 --make a note of how many rows are in the stream
-select * 
-from ags_game_audience.raw.ed_cdc_stream; 
+SELECT * 
+FROM ags_game_audience.raw.ed_cdc_stream; 
 
  
 --process the stream by using the rows in a merge 
-MERGE INTO AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED e
+MERGE INTO ags_game_audience.enhanced.logs_enhanced ASe
 USING (
-        SELECT cdc.ip_address 
-        , cdc.user_login as GAMER_NAME
-        , cdc.user_event as GAME_EVENT_NAME
-        , cdc.datetime_iso8601 as GAME_EVENT_UTC
-        , city
-        , region
-        , country
-        , timezone as GAMER_LTZ_NAME
-        , CONVERT_TIMEZONE( 'UTC',timezone,cdc.datetime_iso8601) as game_event_ltz
-        , DAYNAME(game_event_ltz) as DOW_NAME
-        , TOD_NAME
-        from ags_game_audience.raw.ed_cdc_stream cdc
-        JOIN ipinfo_geoloc.demo.location loc 
-        ON ipinfo_geoloc.public.TO_JOIN_KEY(cdc.ip_address) = loc.join_key
-        AND ipinfo_geoloc.public.TO_INT(cdc.ip_address) 
-        BETWEEN start_ip_int AND end_ip_int
-        JOIN AGS_GAME_AUDIENCE.RAW.TIME_OF_DAY_LU tod
-        ON HOUR(game_event_ltz) = tod.hour
-      ) r
-ON r.GAMER_NAME = e.GAMER_NAME
-AND r.GAME_EVENT_UTC = e.GAME_EVENT_UTC
-AND r.GAME_EVENT_NAME = e.GAME_EVENT_NAME 
+  SELECT
+    cdc.ip_address,
+    cdc.user_login AS gamer_name,
+    cdc.user_event AS game_event_name,
+    cdc.datetime_iso8601 AS game_event_utc,
+    city,
+    region,
+    country,
+    timezone AS gamer_ltz_name,
+    CONVERT_TIMEZONE( 'UTC',timezone,cdc.datetime_iso8601) AS game_event_ltz,
+    DAYNAME(game_event_ltz) AS dow_name,
+    tod_name
+  FROM ags_game_audience.raw.ed_cdc_stream AScdc
+  INNER JOIN ipinfo_geoloc.demo.location ASloc 
+    ON ipinfo_geoloc.public.TO_JOIN_KEY(cdc.ip_address) = loc.join_key
+    AND ipinfo_geoloc.public.TO_INT(cdc.ip_address) 
+    BETWEEN start_ip_int AND end_ip_int
+  INNER JOIN ags_game_audience.raw.time_of_day_lu AStod
+    ON HOUR(game_event_ltz) = tod.hour
+) ASr
+  ON r.gamer_name = e.gamer_name
+  AND r.game_event_utc = e.game_event_utc
+  AND r.game_event_name = e.game_event_name 
 WHEN NOT MATCHED THEN 
-INSERT (IP_ADDRESS, GAMER_NAME, GAME_EVENT_NAME
-        , GAME_EVENT_UTC, CITY, REGION
-        , COUNTRY, GAMER_LTZ_NAME, GAME_EVENT_LTZ
-        , DOW_NAME, TOD_NAME)
-        VALUES
-        (IP_ADDRESS, GAMER_NAME, GAME_EVENT_NAME
-        , GAME_EVENT_UTC, CITY, REGION
-        , COUNTRY, GAMER_LTZ_NAME, GAME_EVENT_LTZ
-        , DOW_NAME, TOD_NAME);
+  INSERT (
+    ip_address, gamer_name, game_event_name,
+    game_event_utc, city, region,
+    country, gamer_ltz_name, game_event_ltz,
+    dow_name, tod_name
+  )
+  VALUES
+  (
+    ip_address, gamer_name, game_event_name,
+    game_event_utc, city, region,
+    country, gamer_ltz_name, game_event_ltz,
+    dow_name, tod_name
+  );
  
 --Did all the rows from the stream disappear? 
-select * 
-from ags_game_audience.raw.ed_cdc_stream; 
+SELECT * 
+FROM ags_game_audience.raw.ed_cdc_stream; 
 
 /*
 📓 What Happens if the Merge Fails?
@@ -266,47 +276,52 @@ With the PIPE and STREAM in place, we just need a task at the end that pulls new
 
 -- 🥋 Create a CDC-Fueled, Time-Driven Task
 --Create a new task that uses the MERGE you just tested
-create or replace task AGS_GAME_AUDIENCE.RAW.CDC_LOAD_LOGS_ENHANCED
-	USER_TASK_MANAGED_INITIAL_WAREHOUSE_SIZE='XSMALL'
-	SCHEDULE = '5 minutes'
-	as 
-MERGE INTO AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED e
-USING (
-        SELECT cdc.ip_address 
-        , cdc.user_login as GAMER_NAME
-        , cdc.user_event as GAME_EVENT_NAME
-        , cdc.datetime_iso8601 as GAME_EVENT_UTC
-        , city
-        , region
-        , country
-        , timezone as GAMER_LTZ_NAME
-        , CONVERT_TIMEZONE( 'UTC',timezone,cdc.datetime_iso8601) as game_event_ltz
-        , DAYNAME(game_event_ltz) as DOW_NAME
-        , TOD_NAME
-        from ags_game_audience.raw.ed_cdc_stream cdc
-        JOIN ipinfo_geoloc.demo.location loc 
-        ON ipinfo_geoloc.public.TO_JOIN_KEY(cdc.ip_address) = loc.join_key
-        AND ipinfo_geoloc.public.TO_INT(cdc.ip_address) 
-        BETWEEN start_ip_int AND end_ip_int
-        JOIN AGS_GAME_AUDIENCE.RAW.TIME_OF_DAY_LU tod
-        ON HOUR(game_event_ltz) = tod.hour
-      ) r
-ON r.GAMER_NAME = e.GAMER_NAME
-AND r.GAME_EVENT_UTC = e.GAME_EVENT_UTC
-AND r.GAME_EVENT_NAME = e.GAME_EVENT_NAME 
-WHEN NOT MATCHED THEN 
-INSERT (IP_ADDRESS, GAMER_NAME, GAME_EVENT_NAME
-        , GAME_EVENT_UTC, CITY, REGION
-        , COUNTRY, GAMER_LTZ_NAME, GAME_EVENT_LTZ
-        , DOW_NAME, TOD_NAME)
-        VALUES
-        (IP_ADDRESS, GAMER_NAME, GAME_EVENT_NAME
-        , GAME_EVENT_UTC, CITY, REGION
-        , COUNTRY, GAMER_LTZ_NAME, GAME_EVENT_LTZ
-        , DOW_NAME, TOD_NAME);
+CREATE OR REPLACE TASK ags_game_audience.raw.cdc_load_logs_enhanced
+  USER_TASK_MANAGED_INITIAL_WAREHOUSE_SIZE='XSMALL'
+  SCHEDULE = '5 minutes'
+AS 
+  MERGE INTO ags_game_audience.enhanced.logs_enhanced ASe
+  USING (
+    SELECT
+      cdc.ip_address,
+      cdc.user_login AS gamer_name,
+      cdc.user_event AS game_event_name,
+      cdc.datetime_iso8601 AS game_event_utc,
+      city,
+      region,
+      country,
+      timezone AS gamer_ltz_name,
+      CONVERT_TIMEZONE( 'UTC',timezone,cdc.datetime_iso8601) AS game_event_ltz,
+      DAYNAME(game_event_ltz) AS dow_name,
+      tod_name
+    FROM ags_game_audience.raw.ed_cdc_stream AScdc
+    INNER JOIN ipinfo_geoloc.demo.location ASloc 
+      ON ipinfo_geoloc.public.TO_JOIN_KEY(cdc.ip_address) = loc.join_key
+      AND ipinfo_geoloc.public.TO_INT(cdc.ip_address) 
+      BETWEEN start_ip_int AND end_ip_int
+    INNER JOIN ags_game_audience.raw.time_of_day_lu AStod
+      ON HOUR(game_event_ltz) = tod.hour
+  ) ASr
+    ON r.gamer_name = e.gamer_name
+    AND r.game_event_utc = e.game_event_utc
+    AND r.game_event_name = e.game_event_name 
+  WHEN NOT MATCHED THEN 
+    INSERT (
+      ip_address, gamer_name, game_event_name,
+      game_event_utc, city, region,
+      country, gamer_ltz_name, game_event_ltz,
+      dow_name, tod_name
+    )
+    VALUES
+    (
+      ip_address, gamer_name, game_event_name,
+      game_event_utc, city, region,
+      country, gamer_ltz_name, game_event_ltz,
+      dow_name, tod_name
+    );
         
 --Resume the task so it is running
-alter task AGS_GAME_AUDIENCE.RAW.CDC_LOAD_LOGS_ENHANCED resume;
+ALTER TASK ags_game_audience.raw.cdc_load_logs_enhanced RESUME;
 
 /*
 📓 A Final Improvement!
@@ -317,49 +332,54 @@ We're going to add a WHEN clause to the TASK that checks the STREAM. It will sti
 🎯 Add A Stream Dependency to the Task Schedule
 Add STREAM dependency logic to the TASK header and replace the task. 
 */
-create or replace task AGS_GAME_AUDIENCE.RAW.CDC_LOAD_LOGS_ENHANCED
-	USER_TASK_MANAGED_INITIAL_WAREHOUSE_SIZE='XSMALL'
-	SCHEDULE = '5 minutes'
-when
-    system$stream_has_data('ed_cdc_stream')
-	as 
-MERGE INTO AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED e
-USING (
-        SELECT cdc.ip_address 
-        , cdc.user_login as GAMER_NAME
-        , cdc.user_event as GAME_EVENT_NAME
-        , cdc.datetime_iso8601 as GAME_EVENT_UTC
-        , city
-        , region
-        , country
-        , timezone as GAMER_LTZ_NAME
-        , CONVERT_TIMEZONE( 'UTC',timezone,cdc.datetime_iso8601) as game_event_ltz
-        , DAYNAME(game_event_ltz) as DOW_NAME
-        , TOD_NAME
-        from ags_game_audience.raw.ed_cdc_stream cdc
-        JOIN ipinfo_geoloc.demo.location loc 
-        ON ipinfo_geoloc.public.TO_JOIN_KEY(cdc.ip_address) = loc.join_key
-        AND ipinfo_geoloc.public.TO_INT(cdc.ip_address) 
-        BETWEEN start_ip_int AND end_ip_int
-        JOIN AGS_GAME_AUDIENCE.RAW.TIME_OF_DAY_LU tod
-        ON HOUR(game_event_ltz) = tod.hour
-      ) r
-ON r.GAMER_NAME = e.GAMER_NAME
-AND r.GAME_EVENT_UTC = e.GAME_EVENT_UTC
-AND r.GAME_EVENT_NAME = e.GAME_EVENT_NAME 
-WHEN NOT MATCHED THEN 
-INSERT (IP_ADDRESS, GAMER_NAME, GAME_EVENT_NAME
-        , GAME_EVENT_UTC, CITY, REGION
-        , COUNTRY, GAMER_LTZ_NAME, GAME_EVENT_LTZ
-        , DOW_NAME, TOD_NAME)
-        VALUES
-        (IP_ADDRESS, GAMER_NAME, GAME_EVENT_NAME
-        , GAME_EVENT_UTC, CITY, REGION
-        , COUNTRY, GAMER_LTZ_NAME, GAME_EVENT_LTZ
-        , DOW_NAME, TOD_NAME);
+CREATE OR REPLACE TASK ags_game_audience.raw.cdc_load_logs_enhanced
+  USER_TASK_MANAGED_INITIAL_WAREHOUSE_SIZE='XSMALL'
+  SCHEDULE = '5 minutes'
+WHEN
+  system$stream_has_data('ed_cdc_stream')
+AS 
+  MERGE INTO ags_game_audience.enhanced.logs_enhanced ASe
+  USING (
+    SELECT
+      cdc.ip_address,
+      cdc.user_login AS gamer_name,
+      cdc.user_event AS game_event_name,
+      cdc.datetime_iso8601 AS game_event_utc,
+      city,
+      region,
+      country,
+      timezone AS gamer_ltz_name,
+      CONVERT_TIMEZONE( 'UTC',timezone,cdc.datetime_iso8601) AS game_event_ltz,
+      DAYNAME(game_event_ltz) AS dow_name,
+      tod_name
+    FROM ags_game_audience.raw.ed_cdc_stream AScdc
+    INNER JOIN ipinfo_geoloc.demo.location ASloc 
+      ON ipinfo_geoloc.public.TO_JOIN_KEY(cdc.ip_address) = loc.join_key
+      AND ipinfo_geoloc.public.TO_INT(cdc.ip_address) 
+      BETWEEN start_ip_int AND end_ip_int
+    INNER JOIN ags_game_audience.raw.time_of_day_lu AStod
+      ON HOUR(game_event_ltz) = tod.hour
+  ) ASr
+    ON r.gamer_name = e.gamer_name
+    AND r.game_event_utc = e.game_event_utc
+    AND r.game_event_name = e.game_event_name 
+  WHEN NOT MATCHED THEN 
+    INSERT (
+      ip_address, gamer_name, game_event_name,
+      game_event_utc, city, region,
+      country, gamer_ltz_name, game_event_ltz,
+      dow_name, tod_name
+    )
+    VALUES
+    (
+      ip_address, gamer_name, game_event_name,
+      game_event_utc, city, region,
+      country, gamer_ltz_name, game_event_ltz,
+      dow_name, tod_name
+    );
         
 --Resume the task so it is running
-alter task AGS_GAME_AUDIENCE.RAW.CDC_LOAD_LOGS_ENHANCED resume;
+ALTER TASK ags_game_audience.raw.cdc_load_logs_enhanced RESUME;
 
 /*
 📓 Confirming Data is Flowing 
@@ -375,27 +395,28 @@ The second stop for the data is the AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED tab
 Use all the tools available to you to check that both the pipe and task are working to move data all the way from the stage to the enhanced table. Remember that there should be 10 records in every new file, but that not all 10 rows will make it to the Enhanced table, because of the join to the IPInfo share table. 
 */
 
-select *
-from ags_game_audience.raw.ED_PIPELINE_LOGS
+SELECT *
+FROM ags_game_audience.raw.ed_pipeline_logs
 ;
 
-select *
-from AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED
+SELECT *
+FROM ags_game_audience.enhanced.logs_enhanced
 ;
 
 
-use util_db.public;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from
-(
-SELECT
-'DNGW06' as step
- ,(
-   select CASE WHEN pipe_status:executionState::text = 'RUNNING' THEN 1 ELSE 0 END 
-   from(
-   select parse_json(SYSTEM$PIPE_STATUS( 'ags_game_audience.raw.PIPE_GET_NEW_FILES' )) as pipe_status)
-  ) as actual
- ,1 as expected
- ,'Pipe exists and is RUNNING' as description
- ); 
+USE util_db.public;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT
+      'DNGW06' AS step,
+      (
+        SELECT CASE WHEN pipe_status:executionState::TEXT = 'RUNNING' THEN 1 ELSE 0 END 
+        FROM(
+          SELECT PARSE_JSON(system$pipe_status( 'ags_game_audience.raw.PIPE_GET_NEW_FILES' )) AS pipe_status
+        )
+      ) AS actual,
+      1 AS expected,
+      'Pipe exists and is RUNNING' AS description
+  ); 
 
  

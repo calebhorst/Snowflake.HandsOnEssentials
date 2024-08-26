@@ -51,11 +51,11 @@ st.write('The name on your Smoothie will be:', name_on_order)
 */
 
 -- 🥋 Use the ALTER Command to Add a New Column to Your Orders Table
-alter table smoothies.public.orders add column name_on_order varchar(100)
+ALTER TABLE smoothies.public.orders ADD COLUMN name_on_order VARCHAR(100)
 ;
 
-select *
-from smoothies.public.orders
+SELECT *
+FROM smoothies.public.orders
 ;
 
 -- 🥋 Writing the NAME_ON_ORDER Entry to the Snowflake Table
@@ -63,9 +63,9 @@ from smoothies.public.orders
     my_insert_stmt = """ insert into smoothies.public.orders(ingredients, name_on_order)
                 values ('""" + ingredients_string + """','""" + name_on_order + """')"""
 */
-select *
-from smoothies.public.orders
-where name_on_order is not null
+SELECT *
+FROM smoothies.public.orders
+WHERE name_on_order IS NOT NULL
 ;
 
 
@@ -90,28 +90,31 @@ If you get stuck, don't worry, you will be able to see the code we used on upcom
 NOTE: This is a challenge lab and it is supposed to be challenging. Notice we don't give you complete instructions. We want you to bridge gaps and apply prior learning. We want you to be proud of what you are able to piece together on your own. We have carefully designed this challenge to give you just enough information that you can be successful, but you will also have to show some initiative. 
 */
 
-alter table smoothies.public.orders add column order_filled boolean default false;
+ALTER TABLE smoothies.public.orders ADD COLUMN order_filled BOOLEAN DEFAULT FALSE;
 
-select *
-from smoothies.public.orders
+SELECT *
+FROM smoothies.public.orders
 ;
 
-update smoothies.public.orders
-set order_filled = true
-where name_on_order is null
+UPDATE smoothies.public.orders
+SET order_filled = TRUE
+WHERE name_on_order IS NULL
 ;
 
 -- Set your worksheet drop lists
-use util_db.public;
+USE util_db.public;
 -- DO NOT EDIT ANYTHING BELOW THIS LINE
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from (
-  SELECT 'DABW004' as step
- ,( select count(*) from smoothies.information_schema.columns
-    where table_schema = 'PUBLIC' 
-    and table_name = 'ORDERS'
-    and column_name = 'ORDER_FILLED'
-    and column_default = 'FALSE'
-    and data_type = 'BOOLEAN') as actual
- , 1 as expected
- ,'Order Filled is Boolean' as description
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM (
+  SELECT
+    'DABW004' AS step,
+    (
+      SELECT COUNT(*) FROM smoothies.information_schema.columns
+      WHERE table_schema = 'PUBLIC' 
+        AND table_name = 'ORDERS'
+        AND column_name = 'ORDER_FILLED'
+        AND column_default = 'FALSE'
+        AND data_type = 'BOOLEAN'
+    ) AS actual,
+    1 AS expected,
+    'Order Filled is Boolean' AS description
 );

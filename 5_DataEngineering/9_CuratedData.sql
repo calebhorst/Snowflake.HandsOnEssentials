@@ -18,17 +18,17 @@ In this last lesson, we'll be creating some dashboard charts so we can do some l
 Create a SCHEMA named CURATED in the AGS_GAME_AUDIENCE database.
 Make sure the schema is owned by SYSADMIN.
 */
-use role sysadmin;
-use ags_game_audience.raw;
+USE ROLE sysadmin;
+USE ags_game_audience.raw;
 
 
-alter pipe ags_game_audience.raw.PIPE_GET_NEW_FILES set pipe_execution_paused = true;
+ALTER PIPE ags_game_audience.raw.pipe_get_new_files SET PIPE_EXECUTION_PAUSED = TRUE;
 
-show tasks;
-alter task raw.CDC_LOAD_LOGS_ENHANCED suspend;
+SHOW TASKS;
+ALTER TASK raw.cdc_load_logs_enhanced SUSPEND;
 
 -- 🎯 Create a CURATED Layer
-create schema if not exists AGS_GAME_AUDIENCE.CURATED;
+CREATE SCHEMA IF NOT EXISTS ags_game_audience.curated;
 
 /*
 📓 Snowflake Dashboards
@@ -41,8 +41,10 @@ Since Kishore's goal was to load the data and let Agnie analyze her audience, he
 🥋 Create a Chart
 Remember that clone we made of our original logs_enhanced table? We named it LOGS_ENHANCED_UF and it only had a about a 150 rows in it. We'll use that for our chart. 
 */
-select distinct gamer_name, city
-from ags_game_audience.enhanced.logs_enhanced_uf;
+SELECT DISTINCT
+  gamer_name,
+  city
+FROM ags_game_audience.enhanced.logs_enhanced_uf;
 
 /*
 You can drag the tiles into different positions. You can also do some adjustments on the heights and widths. 
@@ -65,11 +67,12 @@ Duplicate a tile.
 Edit it so that the name is "Time of Day".
 Use this code for the query:
 */
-select tod_name as time_of_day
-           , count(*) as tally
-     from ags_game_audience.enhanced.logs_enhanced_uf 
-     group by  tod_name
-     order by tally desc;     
+SELECT
+  tod_name AS time_of_day,
+  COUNT(*) AS tally
+FROM ags_game_audience.enhanced.logs_enhanced_uf 
+GROUP BY  tod_name
+ORDER BY tally DESC;     
 
 /*
 📓 Data and Dashboard Limitations
@@ -88,69 +91,75 @@ Even though Agnie hasn't asked for it, Kishore decides to spend a half hour seei
 --  🥋 Rolling Up Login and Logout Events with ListAgg
 --the ListAgg function can put both login and logout into a single column in a single row
 -- if we don't have a logout, just one timestamp will appear
-select GAMER_NAME
-      , listagg(GAME_EVENT_LTZ,' / ') as login_and_logout
-from AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED 
-group by gamer_name;
+SELECT
+  gamer_name,
+  LISTAGG(game_event_ltz,' / ') AS login_and_logout
+FROM ags_game_audience.enhanced.logs_enhanced 
+GROUP BY gamer_name;
 
 /*
 This is a quick and easy way to aggregate rows, but our goal with rolling up the rows is to compare the times the users logs in and out of the system so we can get a metric on how long they played the game. We will need a more sophisticated method to get this done. 
 */
 -- 🥋 Windowed Data for Calculating Time in Game Per Player
-select GAMER_NAME
-       ,game_event_ltz as login 
-       ,lead(game_event_ltz) 
-                OVER (
-                    partition by GAMER_NAME 
-                    order by GAME_EVENT_LTZ
-                ) as logout
-       ,coalesce(datediff('mi', login, logout),0) as game_session_length
-from AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED
-order by game_session_length desc;
+SELECT
+  gamer_name,
+  game_event_ltz AS login,
+  LEAD(game_event_ltz) 
+    OVER (
+      PARTITION BY gamer_name 
+      ORDER BY game_event_ltz
+    ) AS logout,
+  COALESCE(DATEDIFF('mi', login, logout),0) AS game_session_length
+FROM ags_game_audience.enhanced.logs_enhanced
+ORDER BY game_session_length DESC;
 
 --  🥋 Code for the Heatgrid
 --We added a case statement to bucket the session lengths
-select case when game_session_length < 10 then '< 10 mins'
-            when game_session_length < 20 then '10 to 19 mins'
-            when game_session_length < 30 then '20 to 29 mins'
-            when game_session_length < 40 then '30 to 39 mins'
-            else '> 40 mins' 
-            end as session_length
-            ,tod_name
-from (
-select GAMER_NAME
-       , tod_name
-       ,game_event_ltz as login 
-       ,lead(game_event_ltz) 
-                OVER (
-                    partition by GAMER_NAME 
-                    order by GAME_EVENT_LTZ
-                ) as logout
-       ,coalesce(datediff('mi', login, logout),0) as game_session_length
-from AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED_UF)
-where logout is not null;
+SELECT
+  CASE WHEN game_session_length < 10 THEN '< 10 mins'
+    WHEN game_session_length < 20 THEN '10 to 19 mins'
+    WHEN game_session_length < 30 THEN '20 to 29 mins'
+    WHEN game_session_length < 40 THEN '30 to 39 mins'
+    ELSE '> 40 mins' 
+  END AS session_length,
+  tod_name
+FROM (
+  SELECT
+    gamer_name,
+    tod_name,
+    game_event_ltz AS login,
+    LEAD(game_event_ltz) 
+      OVER (
+        PARTITION BY gamer_name 
+        ORDER BY game_event_ltz
+      ) AS logout,
+    COALESCE(DATEDIFF('mi', login, logout),0) AS game_session_length
+  FROM ags_game_audience.enhanced.logs_enhanced_uf
+)
+WHERE logout IS NOT NULL;
 
 /*
 🎯 Add a Heatgrid for Session Length x Time of Day
 Can you add a Heatgrid to your dashboard that uses the Windowed data aggregation to show the correlation between time of day and the length of a session? (Too bad we can't sort the time of day properly, so just let the dashboard do whatever it does!) 
 */
 
-use util_db.public;
-use role accountadmin;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from
-(
-SELECT
-'DNGW07' as step
- ,( select count(*)/count(*) from snowflake.account_usage.query_history
-    where query_text like '%case when game_session_length < 10%'
-  ) as actual
- ,1 as expected
- ,'Curated Data Lesson completed' as description
- ); 
+USE util_db.public;
+USE ROLE accountadmin;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT
+      'DNGW07' AS step,
+      (
+        SELECT COUNT(*)/COUNT(*) FROM snowflake.account_usage.query_history
+        WHERE query_text LIKE '%case when game_session_length < 10%'
+      ) AS actual,
+      1 AS expected,
+      'Curated Data Lesson completed' AS description
+  ); 
 
 -- the view takes time to populate
-select *
-from snowflake.account_usage.query_history
+SELECT *
+FROM snowflake.account_usage.query_history
 --order by execution_time desc;
-where query_text like '%case when game_session_length < 10%'
+WHERE query_text LIKE '%case when game_session_length < 10%'
 ;

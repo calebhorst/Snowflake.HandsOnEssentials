@@ -62,7 +62,7 @@ Find Kishore's sister's log files, and copy the IP Address assigned to Kishore's
 Paste the IP into this code snippet, and run it. 
 */
 
-select parse_ip('100.41.16.160','inet');
+SELECT PARSE_IP('100.41.16.160','inet');
 
 /*
 🎯 Pull Out PARSE_IP Results Fields
@@ -77,9 +77,9 @@ The code above shows examples. Those are not the correct IP Address. Use the IP 
 
 -- 🎯 Enhancement Infrastructure
 -- Create a new schema in the database and call it ENHANCED
-use role sysadmin;
-use database ags_game_audience;
-create schema if not exists ENHANCED;
+USE ROLE sysadmin;
+USE DATABASE ags_game_audience;
+CREATE SCHEMA IF NOT EXISTS enhanced;
 
 /*
 📓 Locate the IPInfo Free Sample Data
@@ -117,7 +117,7 @@ WHERE ipinfo.public.TO_INT('24.183.120.0') BETWEEN start_ip_int AND end_ip_int;
 Get the number of IP addresses located in each city.
 */
 SELECT
-  COUNT(start_ip) as num_ips,
+  COUNT(start_ip) AS num_ips,
   city
 FROM demo.location
 GROUP BY city
@@ -133,8 +133,8 @@ SELECT
   city,
   region,
   country,
-  lat as latitude,
-  lng as longitude,
+  lat AS latitude,
+  lng AS longitude,
   postal,
   timezone
 FROM demo.location
@@ -148,7 +148,9 @@ Joining a table that has IP addresses to IPinfo’s geolocation table. This join
 -- contains two IP adddresses on the 'ip' column
 
 WITH log AS (
-    SELECT '172.4.12.1' as ip UNION SELECT '172.4.12.2'
+  SELECT '172.4.12.1' AS ip
+  UNION
+  SELECT '172.4.12.2'
 )
 
 -- JOIN operation code
@@ -162,10 +164,10 @@ SELECT
   ipinfo_demo.lat,
   ipinfo_demo.lng,
   ipinfo_demo.timezone 
-FROM log input_db
-JOIN demo.location ipinfo_demo
-ON ipinfo.public.TO_JOIN_KEY(input_db.ip) = ipinfo_demo.join_key
-AND ipinfo.public.TO_INT(input_db.ip) BETWEEN ipinfo_demo.start_ip_int AND ipinfo_demo.end_ip_int;
+FROM log ASinput_db
+INNER JOIN demo.location ASipinfo_demo
+  ON ipinfo.public.TO_JOIN_KEY(input_db.ip) = ipinfo_demo.join_key
+  AND ipinfo.public.TO_INT(input_db.ip) BETWEEN ipinfo_demo.start_ip_int AND ipinfo_demo.end_ip_int;
 
 
 -----------------
@@ -185,7 +187,7 @@ The Nearest IP address shows the closest IP addresses from a geographic coordina
 -- -87.8705 ⇒ Input Longitude
 
 SELECT
-  HAVERSINE(42.556, -87.8705, lat, lng) as distance,
+  HAVERSINE(42.556, -87.8705, lat, lng) AS distance,
   start_ip,
   end_ip,
   city,
@@ -194,8 +196,8 @@ SELECT
   postal,
   timezone
 FROM demo.location
-order by 1
-limit 10;
+ORDER BY 1
+LIMIT 10;
 
 
 -----------------
@@ -210,22 +212,31 @@ limit 10;
 -- 🥋 Look Up Kishore & Prajina's Time Zone
 
 --Look up Kishore and Prajina's Time Zone in the IPInfo share using his headset's IP Address with the PARSE_IP function.
-select start_ip, end_ip, start_ip_int, end_ip_int, city, region, country, timezone
-from IPINFO_GEOLOC.demo.location
-where parse_ip('100.41.16.160', 'inet'):ipv4 --Kishore's Headset's IP Address
-BETWEEN start_ip_int AND end_ip_int;
+SELECT
+  start_ip,
+  end_ip,
+  start_ip_int,
+  end_ip_int,
+  city,
+  region,
+  country,
+  timezone
+FROM ipinfo_geoloc.demo.location
+WHERE PARSE_IP('100.41.16.160', 'inet'):ipv4 --Kishore's Headset's IP Address
+  BETWEEN start_ip_int AND end_ip_int;
 
 -- 🥋 Look Up Everyone's Time Zone
 --Join the log and location tables to add time zone to each row using the PARSE_IP function.
-select logs.*
-       , loc.city
-       , loc.region
-       , loc.country
-       , loc.timezone
-from AGS_GAME_AUDIENCE.RAW.LOGS logs
-join IPINFO_GEOLOC.demo.location loc
-where parse_ip(logs.ip_address, 'inet'):ipv4 
-BETWEEN start_ip_int AND end_ip_int;
+SELECT
+  logs.*,
+  loc.city,
+  loc.region,
+  loc.country,
+  loc.timezone
+FROM ags_game_audience.raw.logs ASlogs
+INNER JOIN ipinfo_geoloc.demo.location ASloc
+WHERE PARSE_IP(logs.ip_address, 'inet'):ipv4 
+  BETWEEN start_ip_int AND end_ip_int;
 
 /*
 📓 How Expensive is This? 
@@ -249,19 +260,20 @@ The TO_INT function converts IP Addresses to integers so we don't have to try to
 
 -- 🥋 Use the IPInfo Functions for a More Efficient Lookup
 --Use two functions supplied by IPShare to help with an efficient IP Lookup Process!
-SELECT logs.ip_address
-, logs.user_login
-, logs.user_event
-, logs.datetime_iso8601
-, city
-, region
-, country
-, timezone 
-from AGS_GAME_AUDIENCE.RAW.LOGS logs
-JOIN IPINFO_GEOLOC.demo.location loc 
-ON IPINFO_GEOLOC.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
-AND IPINFO_GEOLOC.public.TO_INT(logs.ip_address) 
-BETWEEN start_ip_int AND end_ip_int;
+SELECT
+  logs.ip_address,
+  logs.user_login,
+  logs.user_event,
+  logs.datetime_iso8601,
+  city,
+  region,
+  country,
+  timezone 
+FROM ags_game_audience.raw.logs ASlogs
+INNER JOIN ipinfo_geoloc.demo.location ASloc 
+  ON IPINFO_GEOLOC.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
+  AND IPINFO_GEOLOC.public.TO_INT(logs.ip_address) 
+  BETWEEN start_ip_int AND end_ip_int;
 
 /*
 📓 Create a Local Time Column!
@@ -281,20 +293,20 @@ After you create the new column, use the test rows created by Kishore's sister t
 */
 
 SELECT 
-logs.ip_address
-, logs.user_login
-, logs.user_event
-, logs.datetime_iso8601
-, city
-, region
-, country
-, timezone 
-,convert_timezone('UTC', timezone, logs.datetime_iso8601) as GAME_EVENT_LTZ
-from AGS_GAME_AUDIENCE.RAW.LOGS logs
-JOIN IPINFO_GEOLOC.demo.location loc 
-ON IPINFO_GEOLOC.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
-AND IPINFO_GEOLOC.public.TO_INT(logs.ip_address) 
-BETWEEN start_ip_int AND end_ip_int;
+  logs.ip_address,
+  logs.user_login,
+  logs.user_event,
+  logs.datetime_iso8601,
+  city,
+  region,
+  country,
+  timezone,
+  CONVERT_TIMEZONE('UTC', timezone, logs.datetime_iso8601) AS game_event_ltz
+FROM ags_game_audience.raw.logs ASlogs
+INNER JOIN ipinfo_geoloc.demo.location ASloc 
+  ON IPINFO_GEOLOC.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
+  AND IPINFO_GEOLOC.public.TO_INT(logs.ip_address) 
+  BETWEEN start_ip_int AND end_ip_int;
 
 /*
 📓 Planning More Data Enhancements
@@ -313,21 +325,21 @@ Use the DAYNAME function to add the DOW ("Day of Week") name as a column to your
  TIP: If you find any docs page hard to understand, you can scroll to the bottom of the page or click the EXAMPLES hyperlink in the right side headings to see code samples. This is what MANY coders do and you should not feel like an imposter because you like to see concrete EXAMPLES before trying to absorb the abstracted SYNTAX. You can always scroll back to the top when you feel less overwhelmed. 
 */
 SELECT 
-logs.ip_address
-, logs.user_login
-, logs.user_event
-, logs.datetime_iso8601
-, city
-, region
-, country
-, timezone 
-,convert_timezone('UTC', timezone, logs.datetime_iso8601) as GAME_EVENT_LTZ
-,dayname(logs.datetime_iso8601) as DOW_NAME
-from AGS_GAME_AUDIENCE.RAW.LOGS logs
-JOIN IPINFO_GEOLOC.demo.location loc 
-ON IPINFO_GEOLOC.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
-AND IPINFO_GEOLOC.public.TO_INT(logs.ip_address) 
-BETWEEN start_ip_int AND end_ip_int;
+  logs.ip_address,
+  logs.user_login,
+  logs.user_event,
+  logs.datetime_iso8601,
+  city,
+  region,
+  country,
+  timezone,
+  CONVERT_TIMEZONE('UTC', timezone, logs.datetime_iso8601) AS game_event_ltz,
+  DAYNAME(logs.datetime_iso8601) AS dow_name
+FROM ags_game_audience.raw.logs ASlogs
+INNER JOIN ipinfo_geoloc.demo.location ASloc 
+  ON IPINFO_GEOLOC.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
+  AND IPINFO_GEOLOC.public.TO_INT(logs.ip_address) 
+  BETWEEN start_ip_int AND end_ip_int;
 
 /*
 📓 Assigning a Time of Day
@@ -346,17 +358,18 @@ Kishore asks Agnie to write out what she wants to call each portion of the day a
 -- The schema should be set to RAW
 
 --a Look Up table to convert from hour number to "time of day name"
-use role sysadmin;
-use AGS_GAME_AUDIENCE.raw;
+USE ROLE sysadmin;
+USE ags_game_audience.raw;
 
-create table ags_game_audience.raw.time_of_day_lu
-(  hour number
-   ,tod_name varchar(25)
+CREATE TABLE ags_game_audience.raw.time_of_day_lu
+(
+  hour NUMBER,
+  tod_name VARCHAR(25)
 );
 
 --insert statement to add all 24 rows to the table
-insert into time_of_day_lu
-values
+INSERT INTO time_of_day_lu
+VALUES
 (6,'Early morning'),
 (7,'Early morning'),
 (8,'Early morning'),
@@ -384,9 +397,11 @@ values
 
 -- 🥋 Check the Table
 --Check your table to see if you loaded it properly
-select tod_name, listagg(hour,',') 
-from time_of_day_lu
-group by tod_name;
+SELECT
+  tod_name,
+  LISTAGG(HOUR,',') 
+FROM time_of_day_lu
+GROUP BY tod_name;
 
 /*
 📓 Time to Stretch!
@@ -408,21 +423,21 @@ HINT: You will need a function from Snowflake's Date & Time Functions group in o
 */
 
 SELECT 
-  logs.ip_address
-  , logs.user_login
-  , logs.user_event
-  , logs.datetime_iso8601
+  logs.ip_address,
+  logs.user_login,
+  logs.user_event,
+  logs.datetime_iso8601,
   -- , city
   -- , region
   -- , country
   -- , timezone 
   -- ,convert_timezone('UTC', timezone, logs.datetime_iso8601) as GAME_EVENT_LTZ
-  ,dayname(logs.datetime_iso8601) as DOW_NAME
-  ,lu.tod_name as TOD_NAME
-from AGS_GAME_AUDIENCE.RAW.LOGS logs
-JOIN IPINFO_GEOLOC.demo.location loc ON IPINFO_GEOLOC.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
-join AGS_GAME_AUDIENCE.RAW.time_of_day_lu as lu on lu.hour = hour(datetime_iso8601)
-where IPINFO_GEOLOC.public.TO_INT(logs.ip_address) BETWEEN start_ip_int AND end_ip_int
+  DAYNAME(logs.datetime_iso8601) AS dow_name,
+  lu.tod_name
+FROM ags_game_audience.raw.logs ASlogs
+INNER JOIN ipinfo_geoloc.demo.location ASloc ON IPINFO_GEOLOC.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
+INNER JOIN ags_game_audience.raw.time_of_day_lu AS lu ON lu.hour = HOUR(datetime_iso8601)
+WHERE IPINFO_GEOLOC.public.TO_INT(logs.ip_address) BETWEEN start_ip_int AND end_ip_int
 ;
 
 
@@ -464,37 +479,38 @@ To create the table we can use a CTAS -- a Create Table as Select. CTAS statemen
 */
 
 --Wrap any Select in a CTAS statement
-create or replace table ags_game_audience.enhanced.logs_enhanced 
-as
+CREATE OR REPLACE TABLE ags_game_audience.enhanced.logs_enhanced 
+AS
 SELECT 
-  logs.ip_address
-  , logs.user_login as gamer_name
-  , logs.user_event as game_event_name
-  , logs.datetime_iso8601 as game_event_utc
-  , city
-  , region
-  , country
-  , timezone as GAMER_LTZ_NAME
-  ,convert_timezone('UTC', timezone, logs.datetime_iso8601) as GAME_EVENT_LTZ
-  ,dayname(GAME_EVENT_LTZ) as DOW_NAME
-  ,lu.tod_name as TOD_NAME
-from AGS_GAME_AUDIENCE.RAW.LOGS logs
-JOIN IPINFO_GEOLOC.demo.location loc ON IPINFO_GEOLOC.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
-join AGS_GAME_AUDIENCE.RAW.time_of_day_lu as lu on lu.hour = hour(convert_timezone('UTC', timezone, logs.datetime_iso8601))
-where IPINFO_GEOLOC.public.TO_INT(logs.ip_address) BETWEEN start_ip_int AND end_ip_int
+  logs.ip_address,
+  logs.user_login AS gamer_name,
+  logs.user_event AS game_event_name,
+  logs.datetime_iso8601 AS game_event_utc,
+  city,
+  region,
+  country,
+  timezone AS gamer_ltz_name,
+  CONVERT_TIMEZONE('UTC', timezone, logs.datetime_iso8601) AS game_event_ltz,
+  DAYNAME(game_event_ltz) AS dow_name,
+  lu.tod_name
+FROM ags_game_audience.raw.logs ASlogs
+INNER JOIN ipinfo_geoloc.demo.location ASloc ON IPINFO_GEOLOC.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
+INNER JOIN ags_game_audience.raw.time_of_day_lu AS lu ON lu.hour = HOUR(CONVERT_TIMEZONE('UTC', timezone, logs.datetime_iso8601))
+WHERE IPINFO_GEOLOC.public.TO_INT(logs.ip_address) BETWEEN start_ip_int AND end_ip_int
 ;
 
-use util_db.public;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from
-(
-  SELECT
-   'DNGW03' as step
-   ,( select count(*) 
-      from ags_game_audience.enhanced.logs_enhanced
-      where dow_name = 'Sat'
-      and tod_name = 'Early evening'   
-      and gamer_name like '%prajina'
-     ) as actual
-   ,2 as expected
-   ,'Playing the game on a Saturday evening' as description
-); 
+USE util_db.public;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT
+      'DNGW03' AS step,
+      (
+        SELECT COUNT(*) 
+        FROM ags_game_audience.enhanced.logs_enhanced
+        WHERE dow_name = 'Sat'
+          AND tod_name = 'Early evening'   
+          AND gamer_name LIKE '%prajina'
+      ) AS actual,
+      2 AS expected,
+      'Playing the game on a Saturday evening' AS description
+  ); 

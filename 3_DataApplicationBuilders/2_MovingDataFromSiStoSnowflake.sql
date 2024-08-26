@@ -46,9 +46,9 @@ Give it a single 200 character-limit text column named INGREDIENTS.
 */
 
 -- Create a ORDERS table in your SMOOTHIES database.
-use role sysadmin;
-create table if not exists smoothies.public.orders(
-    ingredients varchar(200)
+USE ROLE sysadmin;
+CREATE TABLE IF NOT EXISTS smoothies.public.orders(
+  ingredients VARCHAR(200)
 )
 ;
 
@@ -126,7 +126,7 @@ if ingredients_list:
 */
 
 -- 🥋 Build a SQL Insert Statement & Test It
- /*
+/*
 my_insert_stmt = """ insert into smoothies.public.orders(ingredients)
             values ('""" + ingredients_string + """')"""
 
@@ -143,18 +143,18 @@ Test the form by starting an ingredients list from scratch. Use the x mark in th
 After submitting a new order, check the Snowflake table to see if the order arrived in the table.
 */
 
-select *
-from smoothies.public.orders
+SELECT *
+FROM smoothies.public.orders
 ;
 
 -- 🥋 Truncate the Orders Table
-truncate table smoothies.public.orders;
+TRUNCATE TABLE smoothies.public.orders;
 
 -- 🥋 Add a Submit Button
 -- Make the second IF Block dependent not on the string having a value, but on the submit button being clicked by the customer. Once you have submitted an order, check the Snowflake table. 
 
-select *
-from smoothies.public.orders
+SELECT *
+FROM smoothies.public.orders
 ;
 
 -- 🎯 Submit a Few More Orders
@@ -166,13 +166,17 @@ In other words, don't just create one order and click the submit 5 times! Change
 
 -- Set your worksheet drop lists
 -- DO NOT EDIT ANYTHING BELOW THIS LINE
-use util_db.public;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from (
-SELECT 'DABW002' as step
- ,(select IFF(count(*)>=5,5,0)
-    from (select ingredients from smoothies.public.orders
-    group by ingredients)
- ) as actual
- ,  5 as expected
- ,'At least 5 different orders entered' as description
+USE util_db.public;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM (
+  SELECT
+    'DABW002' AS step,
+    (
+      SELECT IFF(COUNT(*)>=5,5,0)
+      FROM (
+        SELECT ingredients FROM smoothies.public.orders
+        GROUP BY ingredients
+      )
+    ) AS actual,
+    5 AS expected,
+    'At least 5 different orders entered' AS description
 );

@@ -20,30 +20,30 @@ There are a number of ways to productionize this load process, but we'll start b
 
 The task you just created doesn't actually do anything, and it's not running anyway (did you see where it says "Suspended"?), but at least you've seen how simple it is to create one, assign a warehouse, and give it a schedule. 
 */
-create or replace task AGS_GAME_AUDIENCE.RAW.LOAD_LOGS_ENHANCED
-warehouse = 'compute_wh'
-schedule = '5 minute'
-as
-select 'hello'
+CREATE OR REPLACE TASK ags_game_audience.raw.load_logs_enhanced
+  warehouse = 'compute_wh'
+  SCHEDULE = '5 minute'
+AS
+  SELECT 'hello'
 ;
 
 
 -- 🥋 SYSADMIN Privileges for Executing Tasks
-use role accountadmin;
+USE ROLE accountadmin;
 --You have to run this grant or you won't be able to test your tasks while in SYSADMIN role
 --this is true even if SYSADMIN owns the task!!
-grant execute task on account to role SYSADMIN;
+GRANT EXECUTE TASK ON ACCOUNT TO ROLE sysadmin;
 
-use role sysadmin; 
+USE ROLE sysadmin; 
 
 --Now you should be able to run the task, even if your role is set to SYSADMIN
-execute task AGS_GAME_AUDIENCE.RAW.LOAD_LOGS_ENHANCED;
+EXECUTE TASK ags_game_audience.raw.load_logs_enhanced;
 
 --the SHOW command might come in handy to look at the task 
-show tasks in account;
+SHOW TASKS IN ACCOUNT;
 
 --you can also look at any task more in depth using DESCRIBE
-describe task AGS_GAME_AUDIENCE.RAW.LOAD_LOGS_ENHANCED;
+DESCRIBE TASK ags_game_audience.raw.load_logs_enhanced;
 
 /*
 📓 Running the Task
@@ -58,10 +58,10 @@ You can view a lot of information about the task and see it's history.
 
 -- 🥋 Execute the Task a Few More Times
 --Run the task a few times to see changes in the RUN HISTORY
-execute task AGS_GAME_AUDIENCE.RAW.LOAD_LOGS_ENHANCED;
+EXECUTE TASK ags_game_audience.raw.load_logs_enhanced;
 
 
-use role accountadmin;
+USE ROLE accountadmin;
 SELECT *
 FROM snowflake.account_usage.task_history
 ORDER BY completed_time DESC
@@ -87,44 +87,44 @@ Copy the logic from earlier lab work, the query history, or an earlier page of t
 Then, run the CREATE TASK statement to re-create a new version of the task. 
 */
 
-use role sysadmin;
+USE ROLE sysadmin;
 
-create or replace task AGS_GAME_AUDIENCE.RAW.LOAD_LOGS_ENHANCED
-warehouse = 'compute_wh'
-schedule = '5 minute'
-as
-INSERT INTO AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED
-SELECT 
-  logs.ip_address
-  , logs.user_login as gamer_name
-  , logs.user_event as game_event_name
-  , logs.datetime_iso8601 as game_event_utc
-  , city
-  , region
-  , country
-  , timezone as GAMER_LTZ_NAME
-  ,convert_timezone('UTC', timezone, logs.datetime_iso8601) as GAME_EVENT_LTZ
-  ,dayname(GAME_EVENT_LTZ) as DOW_NAME
-  ,lu.tod_name as TOD_NAME
-from AGS_GAME_AUDIENCE.RAW.LOGS logs
-JOIN IPINFO_GEOLOC.demo.location loc ON IPINFO_GEOLOC.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
-join AGS_GAME_AUDIENCE.RAW.time_of_day_lu as lu on lu.hour = hour(convert_timezone('UTC', timezone, logs.datetime_iso8601))
-where IPINFO_GEOLOC.public.TO_INT(logs.ip_address) BETWEEN start_ip_int AND end_ip_int
+CREATE OR REPLACE TASK ags_game_audience.raw.load_logs_enhanced
+  warehouse = 'compute_wh'
+  SCHEDULE = '5 minute'
+AS
+  INSERT INTO ags_game_audience.enhanced.logs_enhanced
+  SELECT 
+    logs.ip_address,
+    logs.user_login AS gamer_name,
+    logs.user_event AS game_event_name,
+    logs.datetime_iso8601 AS game_event_utc,
+    city,
+    region,
+    country,
+    timezone AS gamer_ltz_name,
+    CONVERT_TIMEZONE('UTC', timezone, logs.datetime_iso8601) AS game_event_ltz,
+    DAYNAME(game_event_ltz) AS dow_name,
+    lu.tod_name
+  FROM ags_game_audience.raw.logs ASlogs
+  INNER JOIN ipinfo_geoloc.demo.location ASloc ON IPINFO_GEOLOC.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
+  INNER JOIN ags_game_audience.raw.time_of_day_lu AS lu ON lu.hour = HOUR(CONVERT_TIMEZONE('UTC', timezone, logs.datetime_iso8601))
+  WHERE IPINFO_GEOLOC.public.TO_INT(logs.ip_address) BETWEEN start_ip_int AND end_ip_int
 ;
 
 -- Executing the Task to TRY to Load More Rows
 
 
 --make a note of how many rows you have in the table
-select count(*)
-from AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED;
+SELECT COUNT(*)
+FROM ags_game_audience.enhanced.logs_enhanced;
 
 --Run the task to load more rows
-execute task AGS_GAME_AUDIENCE.RAW.LOAD_LOGS_ENHANCED;
+EXECUTE TASK ags_game_audience.raw.load_logs_enhanced;
 
 --check to see how many rows were added (if any!)
-select count(*)
-from AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED;
+SELECT COUNT(*)
+FROM ags_game_audience.enhanced.logs_enhanced;
 
 /*
 🧂 For Seasoned Data Professionals
@@ -173,28 +173,30 @@ Let's empty the table using a truncate, and reload it with the INSERT just like 
 */
 
 --first we dump all the rows out of the table
-truncate table ags_game_audience.enhanced.LOGS_ENHANCED;
+TRUNCATE TABLE ags_game_audience.enhanced.logs_enhanced;
 
 --then we put them all back in
-INSERT INTO ags_game_audience.enhanced.LOGS_ENHANCED (
-SELECT logs.ip_address 
-, logs.user_login as GAMER_NAME
-, logs.user_event as GAME_EVENT_NAME
-, logs.datetime_iso8601 as GAME_EVENT_UTC
-, city
-, region
-, country
-, timezone as GAMER_LTZ_NAME
-, CONVERT_TIMEZONE( 'UTC',timezone,logs.datetime_iso8601) as game_event_ltz
-, DAYNAME(game_event_ltz) as DOW_NAME
-, TOD_NAME
-from ags_game_audience.raw.LOGS logs
-JOIN ipinfo_geoloc.demo.location loc 
-ON ipinfo_geoloc.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
-AND ipinfo_geoloc.public.TO_INT(logs.ip_address) 
-BETWEEN start_ip_int AND end_ip_int
-JOIN ags_game_audience.raw.TIME_OF_DAY_LU tod
-ON HOUR(game_event_ltz) = tod.hour);
+INSERT INTO ags_game_audience.enhanced.logs_enhanced (
+  SELECT
+    logs.ip_address,
+    logs.user_login AS gamer_name,
+    logs.user_event AS game_event_name,
+    logs.datetime_iso8601 AS game_event_utc,
+    city,
+    region,
+    country,
+    timezone AS gamer_ltz_name,
+    CONVERT_TIMEZONE( 'UTC',timezone,logs.datetime_iso8601) AS game_event_ltz,
+    DAYNAME(game_event_ltz) AS dow_name,
+    tod_name
+  FROM ags_game_audience.raw.logs ASlogs
+  INNER JOIN ipinfo_geoloc.demo.location ASloc 
+    ON ipinfo_geoloc.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
+    AND ipinfo_geoloc.public.TO_INT(logs.ip_address) 
+    BETWEEN start_ip_int AND end_ip_int
+  INNER JOIN ags_game_audience.raw.time_of_day_lu AStod
+    ON HOUR(game_event_ltz) = tod.hour
+);
 
 --Hey! We should do this every 5 minutes from now until the next millennium - Y3K!!!
 --Alexa, play Yeah by Usher!
@@ -216,8 +218,8 @@ We can also use cloning to make back ups of things we feel more comfortable havi
 --since it holds the records from the UPDATED FEED file, we'll name it _UF
 
 -- 🥋 Create a Backup Copy of the Table
-create table ags_game_audience.enhanced.LOGS_ENHANCED_UF 
-clone ags_game_audience.enhanced.LOGS_ENHANCED;
+CREATE TABLE ags_game_audience.enhanced.logs_enhanced_uf 
+CLONE ags_game_audience.enhanced.logs_enhanced;
 
 /*
 📓 Sophisticated 2010's - The Merge!
@@ -265,58 +267,59 @@ For now, we'll continue to keep things simple and separate. Our next merge will 
 */
 
 -- 🥋 Build Your Insert Merge
-use role sysadmin;
-use database ags_game_audience;
-MERGE INTO ENHANCED.LOGS_ENHANCED e
+USE ROLE sysadmin;
+USE DATABASE ags_game_audience;
+MERGE INTO enhanced.logs_enhanced ASe
 USING (
-    SELECT logs.ip_address 
-    , logs.user_login as GAMER_NAME
-    , logs.user_event as GAME_EVENT_NAME
-    , logs.datetime_iso8601 as GAME_EVENT_UTC
-    , city
-    , region
-    , country
-    , timezone as GAMER_LTZ_NAME
-    , CONVERT_TIMEZONE( 'UTC',timezone,logs.datetime_iso8601) as game_event_ltz
-    , DAYNAME(game_event_ltz) as DOW_NAME
-    , TOD_NAME
-    from ags_game_audience.raw.LOGS logs
-    JOIN ipinfo_geoloc.demo.location loc 
+  SELECT
+    logs.ip_address,
+    logs.user_login AS gamer_name,
+    logs.user_event AS game_event_name,
+    logs.datetime_iso8601 AS game_event_utc,
+    city,
+    region,
+    country,
+    timezone AS gamer_ltz_name,
+    CONVERT_TIMEZONE( 'UTC',timezone,logs.datetime_iso8601) AS game_event_ltz,
+    DAYNAME(game_event_ltz) AS dow_name,
+    tod_name
+  FROM ags_game_audience.raw.logs ASlogs
+  INNER JOIN ipinfo_geoloc.demo.location ASloc 
     ON ipinfo_geoloc.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
     AND ipinfo_geoloc.public.TO_INT(logs.ip_address) 
     BETWEEN start_ip_int AND end_ip_int
-    JOIN ags_game_audience.raw.TIME_OF_DAY_LU tod ON HOUR(game_event_ltz) = tod.hour
-) r
-ON r.GAMER_NAME = e.GAMER_NAME
-and r.GAME_EVENT_UTC = e.game_event_utc
-and r.GAME_EVENT_NAME = e.game_event_name
+  INNER JOIN ags_game_audience.raw.time_of_day_lu AStod ON HOUR(game_event_ltz) = tod.hour
+) ASr
+  ON r.gamer_name = e.gamer_name
+  AND r.game_event_utc = e.game_event_utc
+  AND r.game_event_name = e.game_event_name
 WHEN NOT MATCHED THEN
-insert (
-    ip_address
-    ,gamer_name
-    ,game_event_name
-    ,game_event_utc
-    ,city
-    ,region
-    ,country
-    ,gamer_ltz_name
-    ,game_event_ltz
-    ,dow_name
-    ,tod_name
-)
-values (
-    ip_address
-    ,gamer_name
-    ,game_event_name
-    ,game_event_utc
-    ,city
-    ,region
-    ,country
-    ,gamer_ltz_name
-    ,game_event_ltz
-    ,dow_name
-    ,tod_name
-)
+  INSERT (
+    ip_address,
+    gamer_name,
+    game_event_name,
+    game_event_utc,
+    city,
+    region,
+    country,
+    gamer_ltz_name,
+    game_event_ltz,
+    dow_name,
+    tod_name
+  )
+  VALUES (
+    ip_address,
+    gamer_name,
+    game_event_name,
+    game_event_utc,
+    city,
+    region,
+    country,
+    gamer_ltz_name,
+    game_event_ltz,
+    dow_name,
+    tod_name
+  )
 ;
 
 /*
@@ -328,7 +331,7 @@ The first time we run the merge, it should load EVERY record. The second time we
 
 -- 🥋 Truncate Again for a Fresh Start
 --let's truncate so we can start the load over again
-truncate table AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED;
+TRUNCATE TABLE ags_game_audience.enhanced.logs_enhanced;
 
 /*
 🥋 Check Your Logs Enhanced Table
@@ -367,63 +370,64 @@ What happens if you run it more than once? Does it create multiple copies of eac
 If you'd like to test your MERGE TASK by adding a few fake rows to the source table, you can use the code below. After testing, as long as you keep the user_login field set to something consistent like "fake user", you can easily remove the test rows from your raw data table. 
 */
 
-create or replace task ags_game_audience.raw.LOAD_LOGS_ENHANCED
-warehouse='COMPUTE_WH'
-schedule='5 minute'
-as
-MERGE INTO ENHANCED.LOGS_ENHANCED e
-USING (
-    SELECT logs.ip_address 
-    , logs.user_login as GAMER_NAME
-    , logs.user_event as GAME_EVENT_NAME
-    , logs.datetime_iso8601 as GAME_EVENT_UTC
-    , city
-    , region
-    , country
-    , timezone as GAMER_LTZ_NAME
-    , CONVERT_TIMEZONE( 'UTC',timezone,logs.datetime_iso8601) as game_event_ltz
-    , DAYNAME(game_event_ltz) as DOW_NAME
-    , TOD_NAME
-    from ags_game_audience.raw.LOGS logs
-    JOIN ipinfo_geoloc.demo.location loc 
-    ON ipinfo_geoloc.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
-    AND ipinfo_geoloc.public.TO_INT(logs.ip_address) 
-    BETWEEN start_ip_int AND end_ip_int
-    JOIN ags_game_audience.raw.TIME_OF_DAY_LU tod ON HOUR(game_event_ltz) = tod.hour
-) r
-ON r.GAMER_NAME = e.GAMER_NAME
-and r.GAME_EVENT_UTC = e.game_event_utc
-and r.GAME_EVENT_NAME = e.game_event_name
-WHEN NOT MATCHED THEN
-insert (
-    ip_address
-    ,gamer_name
-    ,game_event_name
-    ,game_event_utc
-    ,city
-    ,region
-    ,country
-    ,gamer_ltz_name
-    ,game_event_ltz
-    ,dow_name
-    ,tod_name
-)
-values (
-    ip_address
-    ,gamer_name
-    ,game_event_name
-    ,game_event_utc
-    ,city
-    ,region
-    ,country
-    ,gamer_ltz_name
-    ,game_event_ltz
-    ,dow_name
-    ,tod_name
-)
+CREATE OR REPLACE TASK ags_game_audience.raw.load_logs_enhanced
+  warehouse='COMPUTE_WH'
+  SCHEDULE='5 minute'
+AS
+  MERGE INTO enhanced.logs_enhanced ASe
+  USING (
+    SELECT
+      logs.ip_address,
+      logs.user_login AS gamer_name,
+      logs.user_event AS game_event_name,
+      logs.datetime_iso8601 AS game_event_utc,
+      city,
+      region,
+      country,
+      timezone AS gamer_ltz_name,
+      CONVERT_TIMEZONE( 'UTC',timezone,logs.datetime_iso8601) AS game_event_ltz,
+      DAYNAME(game_event_ltz) AS dow_name,
+      tod_name
+    FROM ags_game_audience.raw.logs ASlogs
+    INNER JOIN ipinfo_geoloc.demo.location ASloc 
+      ON ipinfo_geoloc.public.TO_JOIN_KEY(logs.ip_address) = loc.join_key
+      AND ipinfo_geoloc.public.TO_INT(logs.ip_address) 
+      BETWEEN start_ip_int AND end_ip_int
+    INNER JOIN ags_game_audience.raw.time_of_day_lu AStod ON HOUR(game_event_ltz) = tod.hour
+  ) ASr
+    ON r.gamer_name = e.gamer_name
+    AND r.game_event_utc = e.game_event_utc
+    AND r.game_event_name = e.game_event_name
+  WHEN NOT MATCHED THEN
+    INSERT (
+      ip_address,
+      gamer_name,
+      game_event_name,
+      game_event_utc,
+      city,
+      region,
+      country,
+      gamer_ltz_name,
+      game_event_ltz,
+      dow_name,
+      tod_name
+    )
+    VALUES (
+      ip_address,
+      gamer_name,
+      game_event_name,
+      game_event_utc,
+      city,
+      region,
+      country,
+      gamer_ltz_name,
+      game_event_ltz,
+      dow_name,
+      tod_name
+    )
 ;
 
-EXECUTE TASK AGS_GAME_AUDIENCE.RAW.LOAD_LOGS_ENHANCED;
+EXECUTE TASK ags_game_audience.raw.load_logs_enhanced;
 
 
 -- 🥋 Testing Cycle (Optional)
@@ -432,46 +436,49 @@ EXECUTE TASK AGS_GAME_AUDIENCE.RAW.LOAD_LOGS_ENHANCED;
 --Testing cycle for MERGE. Use these commands to make sure the Merge works as expected
 
 --Write down the number of records in your table 
-select * from AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED;
+SELECT * FROM ags_game_audience.enhanced.logs_enhanced;
 
 --Run the Merge a few times. No new rows should be added at this time 
-EXECUTE TASK AGS_GAME_AUDIENCE.RAW.LOAD_LOGS_ENHANCED;
+EXECUTE TASK ags_game_audience.raw.load_logs_enhanced;
 
 --Check to see if your row count changed 
-select * from AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED;
+SELECT * FROM ags_game_audience.enhanced.logs_enhanced;
 
 --Insert a test record into your Raw Table 
 --You can change the user_event field each time to create "new" records 
 --editing the ip_address or datetime_iso8601 can complicate things more than they need to 
 --editing the user_login will make it harder to remove the fake records after you finish testing 
 INSERT INTO ags_game_audience.raw.game_logs 
-select PARSE_JSON('{"datetime_iso8601":"2025-01-01 00:00:00.000", "ip_address":"196.197.196.255", "user_event":"fake event", "user_login":"fake user"}');
+SELECT PARSE_JSON('{"datetime_iso8601":"2025-01-01 00:00:00.000", "ip_address":"196.197.196.255", "user_event":"fake event", "user_login":"fake user"}');
 
 --After inserting a new row, run the Merge again 
-EXECUTE TASK AGS_GAME_AUDIENCE.RAW.LOAD_LOGS_ENHANCED;
+EXECUTE TASK ags_game_audience.raw.load_logs_enhanced;
 
 --Check to see if any rows were added 
-select * from AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED;
+SELECT * FROM ags_game_audience.enhanced.logs_enhanced;
 
 --When you are confident your merge is working, you can delete the raw records 
-delete from ags_game_audience.raw.game_logs where raw_log like '%fake user%';
+DELETE FROM ags_game_audience.raw.game_logs WHERE raw_log LIKE '%fake user%';
 
 --You should also delete the fake rows from the enhanced table
-delete from AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED
-where gamer_name = 'fake user';
+DELETE FROM ags_game_audience.enhanced.logs_enhanced
+WHERE gamer_name = 'fake user';
 
 --Row count should be back to what it was in the beginning
-select * from AGS_GAME_AUDIENCE.ENHANCED.LOGS_ENHANCED; 
+SELECT * FROM ags_game_audience.enhanced.logs_enhanced; 
 
 
-USE UTIL_DB.PUBLIC;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from
-(
-SELECT
-'DNGW04' as step
- ,( select count(*)/iff (count(*) = 0, 1, count(*))
-  from table(ags_game_audience.information_schema.task_history
-              (task_name=>'LOAD_LOGS_ENHANCED'))) as actual
- ,1 as expected
- ,'Task exists and has been run at least once' as description 
- ); 
+USE util_db.public;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT
+      'DNGW04' AS step,
+      (
+        SELECT COUNT(*)/IFF(COUNT(*) = 0, 1, COUNT(*))
+        FROM TABLE(
+          ags_game_audience.information_schema.task_history(task_name=>'LOAD_LOGS_ENHANCED')
+        )
+      ) AS actual,
+      1 AS expected,
+      'Task exists and has been run at least once' AS description 
+  ); 

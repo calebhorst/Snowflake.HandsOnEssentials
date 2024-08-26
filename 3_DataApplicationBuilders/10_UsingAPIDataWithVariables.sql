@@ -83,37 +83,37 @@ For example, Jack fruit is in there, it's just written differently. Can you figu
 
 You don't have to do all the rows, but at least do Apples, Blueberries, Jack Fruit, Raspberries and Strawberries. 
 */
-use role sysadmin;
-select * 
-from smoothies.public.fruit_options;
+USE ROLE sysadmin;
+SELECT * 
+FROM smoothies.public.fruit_options;
 
-alter table smoothies.public.fruit_options add column search_on varchar(100);
+ALTER TABLE smoothies.public.fruit_options ADD COLUMN search_on VARCHAR(100);
 
 -- Apples, Blueberries, Jack Fruit, Raspberries and Strawberries. 
-update smoothies.public.fruit_options
-set search_on = 'Apples'
-where fruit_name = 'Apples'
+UPDATE smoothies.public.fruit_options
+SET search_on = 'Apples'
+WHERE fruit_name = 'Apples'
 ;
-update smoothies.public.fruit_options
-set search_on = 'Blueberry'
-where fruit_name = 'Blueberries'
+UPDATE smoothies.public.fruit_options
+SET search_on = 'Blueberry'
+WHERE fruit_name = 'Blueberries'
 ;
-update smoothies.public.fruit_options
-set search_on = 'Jackfruit'
-where fruit_name = 'Jack Fruit'
+UPDATE smoothies.public.fruit_options
+SET search_on = 'Jackfruit'
+WHERE fruit_name = 'Jack Fruit'
 ;
-update smoothies.public.fruit_options
-set search_on = 'Raspberry'
-where fruit_name = 'Raspberries'
+UPDATE smoothies.public.fruit_options
+SET search_on = 'Raspberry'
+WHERE fruit_name = 'Raspberries'
 ;
-update smoothies.public.fruit_options
-set search_on = 'Strawberry'
-where fruit_name = 'Strawberries'
+UPDATE smoothies.public.fruit_options
+SET search_on = 'Strawberry'
+WHERE fruit_name = 'Strawberries'
 ;
 
-select * 
-from smoothies.public.fruit_options
-where search_on is not null
+SELECT * 
+FROM smoothies.public.fruit_options
+WHERE search_on IS NOT NULL
 ;
 
 /*
@@ -146,28 +146,32 @@ If you mess this up you can truncate the table and start over. You only need the
 */
 
 -- Set your worksheet drop lists
-USE UTIL_DB.PUBLIC;
+USE util_db.public;
 
-select *
-from smoothies.public.orders
-order by order_ts desc
+SELECT *
+FROM smoothies.public.orders
+ORDER BY order_ts DESC
 ;
 
 -- DO NOT EDIT ANYTHING BELOW THIS LINE
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from (
-   SELECT 'DABW008' as step 
-   ,( select sum(hash_ing) from
-      (select hash(ingredients) as hash_ing
-       from smoothies.public.orders
-       where order_ts is not null 
-       and name_on_order is not null 
-       and (name_on_order = 'Kevin' and order_filled = FALSE and hash_ing = 7976616299844859825) 
-       or (name_on_order ='Divya' and order_filled = TRUE and hash_ing = -6112358379204300652)
-       or (name_on_order ='Xi' and order_filled = TRUE and hash_ing = 1016924841131818535))
-     ) as actual 
-   , 2881182761772377708 as expected 
-   ,'Followed challenge lab directions' as description
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM (
+  SELECT
+    'DABW008' AS step,
+    (
+      SELECT SUM(hash_ing) FROM
+        (
+          SELECT HASH(ingredients) AS hash_ing
+          FROM smoothies.public.orders
+          WHERE order_ts IS NOT NULL 
+            AND name_on_order IS NOT NULL 
+            AND (name_on_order = 'Kevin' AND order_filled = FALSE AND hash_ing = 7976616299844859825) 
+            OR (name_on_order ='Divya' AND order_filled = TRUE AND hash_ing = -6112358379204300652)
+            OR (name_on_order ='Xi' AND order_filled = TRUE AND hash_ing = 1016924841131818535)
+        )
+    ) AS actual,
+    2881182761772377708 AS expected,
+    'Followed challenge lab directions' AS description
 ); 
 
-select current_account() as account_locator;
-select current_organization_name()||'.'||current_account_name() as account_id;
+SELECT CURRENT_ACCOUNT() AS account_locator;
+SELECT CURRENT_ORGANIZATION_NAME()||'.'||CURRENT_ACCOUNT_NAME() AS account_id;

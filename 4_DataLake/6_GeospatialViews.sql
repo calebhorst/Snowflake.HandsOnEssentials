@@ -6,15 +6,15 @@ Write a more sophisticated query to parse the data into columns. We give you the
 
 Knowing what you do about Denver, Colorado's approximate longitude and latitude, do you see any issues with this data?  People who work as data professionals should constantly look at their data and question whether it is making sense. In this case, we see some issues. One of our jobs is to massage and cleanse the data as we get it ready to for use by others. 
 */
-use mels_smoothie_challenge_db.trails;
-select
-    $1:sequence_1 as sequence_1
-    ,$1:trail_name::varchar as trail_name
-    ,$1:latitude as latitude
-    ,$1:longitude as longitude
-    ,$1:sequence_2 as sequence_2
-    ,$1:elevation as elevation
-from @trails_parquet (file_format => ff_parquet)
+USE mels_smoothie_challenge_db.trails;
+SELECT
+  $1:sequence_1 AS sequence_1,
+  $1:trail_name::VARCHAR AS trail_name,
+  $1:latitude AS latitude,
+  $1:longitude AS longitude,
+  $1:sequence_2 AS sequence_2,
+  $1:elevation AS elevation
+FROM @trails_parquet (FILE_FORMAT => ff_parquet)
 ;
 
 /*
@@ -26,14 +26,15 @@ Longitudes are between 0 (the prime meridian) and 180. So no more than 3 digits 
 If we cast both longitude and latitude data as NUMBER(11,8) we should be safe.  We have included the code for this select statement below. 
 */
 --Nicely formatted trail data
-select 
- $1:sequence_1 as point_id,
- $1:trail_name::varchar as trail_name,
- $1:latitude::number(11,8) as lng, --remember we did a gut check on this data
- $1:longitude::number(11,8) as lat
-from @trails_parquet
-(file_format => ff_parquet)
-order by point_id;
+SELECT 
+  $1:sequence_1 AS point_id,
+  $1:trail_name::VARCHAR AS trail_name,
+  $1:latitude::NUMBER(11,8) AS lng, --remember we did a gut check on this data
+  $1:longitude::NUMBER(11,8) AS lat
+FROM
+  @trails_parquet
+  (FILE_FORMAT => ff_parquet)
+ORDER BY point_id;
 
 /*
 After running this select statement, you can copy and paste one set of coordinates into the WKT Playground site to see if it looks accurate. Snowflake has functions for working with geometry and geography data, but no way to overlay it on maps, yet. 
@@ -49,45 +50,47 @@ Name it CHERRY_CREEK_TRAIL.
 Make sure it is in Mel's database, in his TRAILS schema.
 Make sure it is owned by SYSADMIN. 
 */
-use mels_smoothie_challenge_db.trails;
-create or replace view CHERRY_CREEK_TRAIL
-as
-select 
- $1:sequence_1 as point_id,
- $1:trail_name::varchar as trail_name,
- $1:latitude::number(11,8) as lng, --remember we did a gut check on this data
- $1:longitude::number(11,8) as lat
-from @trails_parquet
-(file_format => ff_parquet)
-order by point_id
+USE mels_smoothie_challenge_db.trails;
+CREATE OR REPLACE VIEW cherry_creek_trail
+AS
+SELECT 
+  $1:sequence_1 AS point_id,
+  $1:trail_name::VARCHAR AS trail_name,
+  $1:latitude::NUMBER(11,8) AS lng, --remember we did a gut check on this data
+  $1:longitude::NUMBER(11,8) AS lat
+FROM
+  @trails_parquet
+  (FILE_FORMAT => ff_parquet)
+ORDER BY point_id
 ;
 
-select *
-from CHERRY_CREEK_TRAIL
+SELECT *
+FROM cherry_creek_trail
 ;
 
 -- 🥋 Use || to Chain Lat and Lng Together into Coordinate Sets!
 -- Now we can make pairs with a space in between, since we know that's how WKT Playground likes them formatted!
 --Using concatenate to prepare the data for plotting on a map
-select top 100 
- lng||' '||lat as coord_pair
-,'POINT('||coord_pair||')' as trail_point
-from cherry_creek_trail
+SELECT TOP 100 
+  lng||' '||lat AS coord_pair,
+  'POINT('||coord_pair||')' AS trail_point
+FROM cherry_creek_trail
 ;
 
 -- The coord_pairs could come in very handy so we should add this column to our view! To add a column, you have to replace the old view. 
 --To add a column, we have to replace the entire view
 --changes to the original are shown in red
-create or replace view cherry_creek_trail as
-select 
- $1:sequence_1 as point_id,
- $1:trail_name::varchar as trail_name,
- $1:latitude::number(11,8) as lng,
- $1:longitude::number(11,8) as lat,
- lng||' '||lat as coord_pair
-from @trails_parquet
-(file_format => ff_parquet)
-order by point_id
+CREATE OR REPLACE VIEW cherry_creek_trail AS
+SELECT 
+  $1:sequence_1 AS point_id,
+  $1:trail_name::VARCHAR AS trail_name,
+  $1:latitude::NUMBER(11,8) AS lng,
+  $1:longitude::NUMBER(11,8) AS lat,
+  lng||' '||lat AS coord_pair
+FROM
+  @trails_parquet
+  (FILE_FORMAT => ff_parquet)
+ORDER BY point_id
 ;
 
 /*
@@ -107,14 +110,14 @@ Coordinate Pair
 
 🥋 Run this SELECT and Paste the Results into WKT Playground!
 */
-select 
-'LINESTRING('||
-listagg(coord_pair, ',') 
-within group (order by point_id)
-||')' as my_linestring
-from cherry_creek_trail
-where point_id <= 10
-group by trail_name
+SELECT 
+  'LINESTRING('||
+  LISTAGG(coord_pair, ',') 
+  WITHIN GROUP (ORDER BY point_id)
+  ||')' AS my_linestring
+FROM cherry_creek_trail
+WHERE point_id <= 10
+GROUP BY trail_name
 ;
 
 /*
@@ -126,14 +129,14 @@ Can you make a single LINESTRING that runs from Franktown to Confluence Park? Ju
 The reason we have to limit it to 2450 is because the WKT Playground throws an error if you try to plot all 3,500 points. 
 */
 
-select 
-'LINESTRING('||
-listagg(coord_pair, ',') 
-within group (order by point_id)
-||')' as my_linestring
-from cherry_creek_trail
-where point_id <= 2450
-group by trail_name
+SELECT 
+  'LINESTRING('||
+  LISTAGG(coord_pair, ',') 
+  WITHIN GROUP (ORDER BY point_id)
+  ||')' AS my_linestring
+FROM cherry_creek_trail
+WHERE point_id <= 2450
+GROUP BY trail_name
 ;
 
 /*
@@ -142,14 +145,14 @@ Run a select on the geoJSON Stage, using the JSON file format you created. If yo
 
 🥋 Normalize the Data Without Loading It!
 */
-select
-$1:features[0]:properties:Name::string as feature_name
-,$1:features[0]:geometry:coordinates::string as feature_coordinates
-,$1:features[0]:geometry::string as geometry
-,$1:features[0]:properties::string as feature_properties
-,$1:crs:properties:name::string as specs
-,$1 as whole_object
-from @trails_geojson (file_format => ff_json)
+SELECT
+  $1:features[0]:properties:Name::STRING AS feature_name,
+  $1:features[0]:geometry:coordinates::STRING AS feature_coordinates,
+  $1:features[0]:geometry::STRING AS geometry,
+  $1:features[0]:properties::STRING AS feature_properties,
+  $1:crs:properties:name::STRING AS specs,
+  $1 AS whole_object
+FROM @trails_geojson (FILE_FORMAT => ff_json)
 ;
 
 /*
@@ -163,28 +166,30 @@ Make sure it is in Mel's database, in his TRAILS schema.
 Make sure it is owned by SYSADMIN. 
 */
 
-create or replace view DENVER_AREA_TRAILS
-as
-select
-$1:features[0]:properties:Name::string as feature_name
-,$1:features[0]:geometry:coordinates::string as feature_coordinates
-,$1:features[0]:geometry::string as geometry
-,$1:features[0]:properties::string as feature_properties
-,$1:crs:properties:name::string as specs
-,$1 as whole_object
-from @trails_geojson (file_format => ff_json)
+CREATE OR REPLACE VIEW denver_area_trails
+AS
+SELECT
+  $1:features[0]:properties:Name::STRING AS feature_name,
+  $1:features[0]:geometry:coordinates::STRING AS feature_coordinates,
+  $1:features[0]:geometry::STRING AS geometry,
+  $1:features[0]:properties::STRING AS feature_properties,
+  $1:crs:properties:name::STRING AS specs,
+  $1 AS whole_object
+FROM @trails_geojson (FILE_FORMAT => ff_json)
 ;
 
-use util_db.public;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from
-(
-SELECT
-'DLKW06' as step
- ,( select count(*) as tally
-      from mels_smoothie_challenge_db.information_schema.views 
-      where table_name in ('CHERRY_CREEK_TRAIL','DENVER_AREA_TRAILS')) as actual
- ,2 as expected
- ,'Mel\'s views on the geospatial data from Camila' as description
- ); 
+USE util_db.public;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT
+      'DLKW06' AS step,
+      (
+        SELECT COUNT(*) AS tally
+        FROM mels_smoothie_challenge_db.information_schema.views 
+        WHERE table_name IN ('CHERRY_CREEK_TRAIL','DENVER_AREA_TRAILS')
+      ) AS actual,
+      2 AS expected,
+      'Mel\'s views on the geospatial data from Camila' AS description
+  ); 
 
 

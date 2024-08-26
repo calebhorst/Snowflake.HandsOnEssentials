@@ -36,15 +36,16 @@ You will find copies of the two setup scripts here. There are two videos availab
 
 🤖 Is DORA Working? Run This to Find Out!
 */
-use role accountadmin;
+USE ROLE accountadmin;
 
-select util_db.public.grader(step, (actual = expected), actual, expected, description) as graded_results from
-(SELECT 
- 'DORA_IS_WORKING' as step
- ,(select 123 ) as actual
- ,123 as expected
- ,'Dora is working!' as description
-); 
+SELECT util_db.public.grader(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT 
+      'DORA_IS_WORKING' AS step,
+      (SELECT 123 ) AS actual,
+      123 AS expected,
+      'Dora is working!' AS description
+  ); 
 
 /*
 🧰 Tell Us About Your Snowflake Trial Account

@@ -34,15 +34,16 @@ You will find copies of the two DORA setup scripts here.
 🤖 Is DORA Working? Run This to Find Out!
 */
 
-use role accountadmin;
+USE ROLE accountadmin;
 
-select util_db.public.grader(step, (actual = expected), actual, expected, description) as graded_results from
-(SELECT 
- 'DORA_IS_WORKING' as step
- ,(select 123 ) as actual
- ,123 as expected
- ,'Dora is working!' as description
-); 
+SELECT util_db.public.grader(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT 
+      'DORA_IS_WORKING' AS step,
+      (SELECT 123 ) AS actual,
+      123 AS expected,
+      'Dora is working!' AS description
+  ); 
 
-select current_account() as account_locator;
-select current_organization_name()||'.'||current_account_name() as account_id;
+SELECT CURRENT_ACCOUNT() AS account_locator;
+SELECT CURRENT_ORGANIZATION_NAME()||'.'||CURRENT_ACCOUNT_NAME() AS account_id;

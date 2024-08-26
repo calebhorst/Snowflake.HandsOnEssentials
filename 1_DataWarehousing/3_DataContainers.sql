@@ -1,22 +1,22 @@
 -- LAB STEP-BY-STEP  (as shown above)
-use role sysadmin;
-create database if not exists garden_plants;
-drop schema if exists public;
-use database garden_plants;
-create schema if not exists veggies;
-create schema if not exists fruits;
-create schema if not exists flowers;
+USE ROLE sysadmin;
+CREATE DATABASE IF NOT EXISTS garden_plants;
+DROP SCHEMA IF EXISTS public;
+USE DATABASE garden_plants;
+CREATE SCHEMA IF NOT EXISTS veggies;
+CREATE SCHEMA IF NOT EXISTS fruits;
+CREATE SCHEMA IF NOT EXISTS flowers;
 
 -- Create a Worksheet & Run Some Code
-select 'hello' as "Greeting";
+SELECT 'hello' AS "Greeting";
 
 -- Run the SHOW DATABASES Command
-show databases;
-show schemas;
+SHOW DATABASES;
+SHOW SCHEMAS;
 
 -- Change the Database Context and Run the SHOW SCHEMAS Command Again
-use database snowflake_sample_data;
-show schemas;
+USE DATABASE snowflake_sample_data;
+SHOW SCHEMAS;
 
 
 -- All schemas from all databases are shown (based on current role).

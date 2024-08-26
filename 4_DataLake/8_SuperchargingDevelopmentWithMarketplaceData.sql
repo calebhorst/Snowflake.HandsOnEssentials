@@ -16,50 +16,57 @@ Of the views, about how many include "SHOP" in the view name? And about how many
 
 
 */
-use role accountadmin;
+USE ROLE accountadmin;
 
 // Give me the length of a Way
 SELECT
-ID,
-ST_LENGTH(COORDINATES) AS LENGTH
-FROM DENVER.V_OSM_DEN_WAY;
+  id,
+  ST_LENGTH(coordinates) AS length
+FROM denver.v_osm_den_way;
 
 // List the number of nodes in a Way
 SELECT
-ID,
-ST_NPOINTS(COORDINATES) AS NUM_OF_NODES
-FROM DENVER.V_OSM_DEN_WAY;
+  id,
+  ST_NPOINTS(coordinates) AS num_of_nodes
+FROM denver.v_osm_den_way;
 
 // Give me the distance between two Ways
+WITH b AS (
+  SELECT
+    id,
+    coordinates
+  FROM denver.v_osm_den_way
+  WHERE id = 705859570
+)
 SELECT
- A.ID AS ID_1,
- B.ID AS ID_2,
- ST_DISTANCE(A.COORDINATES, B.COORDINATES) AS DISTANCE
-FROM (SELECT
- ID,
- COORDINATES
-FROM DENVER.V_OSM_DEN_WAY
-WHERE ID = 705859567) AS A
-INNER JOIN (SELECT
- ID,
- COORDINATES
-FROM DENVER.V_OSM_DEN_WAY
-WHERE ID = 705859570) AS B;
+  a.id AS id_1,
+  b.id AS id_2,
+  ST_DISTANCE(a.coordinates, b.coordinates) AS distance
+FROM (
+  SELECT
+    id,
+    coordinates
+  FROM denver.v_osm_den_way
+  WHERE id = 705859567
+) AS a
+INNER JOIN b;
 
 // Give me all amenities from education category in a radius of 2,000 metres from a point
-SELECT
-*
-FROM DENVER.V_OSM_DEN_AMENITY_EDUCATION
-WHERE ST_DWITHIN(ST_POINT(-1.049212522000000e+02,
-    3.969829250000000e+01),COORDINATES,2000);
+SELECT *
+FROM denver.v_osm_den_amenity_education
+WHERE ST_DWITHIN(ST_POINT(
+    -1.049212522000000e+02,
+    3.969829250000000e+01
+  ),coordinates,2000);
 
 // Give me all food and beverage Shops in a radius of 2,000 metres from a point
 
-SELECT
-*
-FROM DENVER.V_OSM_DEN_SHOP_FOOD_BEVERAGES  
-WHERE ST_DWITHIN(ST_POINT(-1.049632800000000e+02,
-    3.974338330000000e+01),COORDINATES,2000);
+SELECT *
+FROM denver.v_osm_den_shop_food_beverages  
+WHERE ST_DWITHIN(ST_POINT(
+    -1.049632800000000e+02,
+    3.974338330000000e+01
+  ),coordinates,2000);
 
 /*
 📓 Let's Choose a Location for Melanie's Café
@@ -94,24 +101,24 @@ Denver's Confluence Park
 🥋 Using Variables in Snowflake Worksheets 
 */
 
- -- Melanie's Location into a 2 Variables (mc for melanies cafe)
-set mc_lng='-104.97300245114094';
-set mc_lat='39.76471253574085';
+-- Melanie's Location into a 2 Variables (mc for melanies cafe)
+SET mc_lng='-104.97300245114094';
+SET mc_lat='39.76471253574085';
 
 --Confluence Park into a Variable (loc for location)
-set loc_lng='-105.00840763333615'; 
-set loc_lat='39.754141917497826';
+SET loc_lng='-105.00840763333615'; 
+SET loc_lat='39.754141917497826';
 
 --Test your variables to see if they work with the Makepoint function
-select st_makepoint($mc_lng,$mc_lat) as melanies_cafe_point;
-select st_makepoint($loc_lng,$loc_lat) as confluent_park_point;
+SELECT ST_MAKEPOINT($mc_lng,$mc_lat) AS melanies_cafe_point;
+SELECT ST_MAKEPOINT($loc_lng,$loc_lat) AS confluent_park_point;
 
 --use the variables to calculate the distance from 
 --Melanie's Cafe to Confluent Park
-select st_distance(
-        st_makepoint($mc_lng,$mc_lat)
-        ,st_makepoint($loc_lng,$loc_lat)
-        ) as mc_to_cp;    
+SELECT ST_DISTANCE(
+  ST_MAKEPOINT($mc_lng,$mc_lat),
+  ST_MAKEPOINT($loc_lng,$loc_lat)
+) AS mc_to_cp;    
 
 /*
 📓 Variables are Cool, But Constants Aren't So Bad!
@@ -135,9 +142,9 @@ We need to give our UDF a name, so how about DISTANCE_TO_MC (for Distance to Mel
 We need to pass in the point we want to measure the distance FROM. We'll call that the "location" and shorten it to "LOC". So we'll pass in LOC_LAT as the Latitude and LOC_LNG as the Longitude. 
 
 */
-use role sysadmin;
-use database mels_smoothie_challenge_db;
-create schema if not exists locations;
+USE ROLE sysadmin;
+USE DATABASE mels_smoothie_challenge_db;
+CREATE SCHEMA IF NOT EXISTS locations;
 
 /*
 🥋 Filling in the Function Code
@@ -148,11 +155,11 @@ The second set of numbers will be sent into the function as variables.
 The distance will be returned. 
 */  
 
- -- Melanie's Location into a 2 Variables (mc for melanies cafe)
-set mc_lng='-104.97300245114094';
-set mc_lat='39.76471253574085';
+-- Melanie's Location into a 2 Variables (mc for melanies cafe)
+SET mc_lng='-104.97300245114094';
+SET mc_lat='39.76471253574085';
 
-CREATE OR REPLACE FUNCTION distance_to_mc(loc_lng number(38,32),loc_lat number(38,32))
+CREATE OR REPLACE FUNCTION DISTANCE_TO_MC(loc_lng NUMBER(38,32),loc_lat NUMBER(38,32))
 RETURNS FLOAT
 AS
 $$
@@ -165,27 +172,31 @@ $$
 
 -- 🥋 Test the New Function!
 --Tivoli Center into the variables 
-set tc_lng='-105.00532059763648'; 
-set tc_lat='39.74548137398218';
+SET tc_lng='-105.00532059763648'; 
+SET tc_lat='39.74548137398218';
 
-select distance_to_mc($tc_lng,$tc_lat);
+SELECT DISTANCE_TO_MC($tc_lng,$tc_lat);
 
 /*
 🥋 Create a List of Competing Juice Bars in the Area
 Mel uses the OSM Wiki to get a lead on how to look up Juice Bars in OSM data. He finds that they are generally being classified as fast food, but someone named EzekielT is suggesting they would be better classified as a new amenity type called juice_bar. Until then, we will search for them under several food amenity categories (but we'll include the suggested type, just in case).
 */
 
-select * 
-from OPENSTREETMAP_DENVER.DENVER.V_OSM_DEN_AMENITY_SUSTENANCE
-where 
-    ((amenity in ('fast_food','cafe','restaurant','juice_bar'))
-    and 
-    (name ilike '%jamba%' or name ilike '%juice%'
-     or name ilike '%superfruit%'))
- or 
-    (cuisine like '%smoothie%' or cuisine like '%juice%');
+SELECT * 
+FROM openstreetmap_denver.denver.v_osm_den_amenity_sustenance
+WHERE 
+  (
+    (amenity IN ('fast_food','cafe','restaurant','juice_bar'))
+    AND 
+    (
+      name ILIKE '%jamba%' OR name ILIKE '%juice%'
+      OR name ILIKE '%superfruit%'
+    )
+  )
+  OR 
+  (cuisine LIKE '%smoothie%' OR cuisine LIKE '%juice%');
 
- /*
+/*
  As of June 2022, the select above gave us a list of 14 juice and smoothie providers.
 
 As of June 2024, the select gave us 15 juice and smoothie providers. 
@@ -197,31 +208,35 @@ Create a view called COMPETITION with the SELECT statement above.
 
 Make sure the view is in the LOCATIONS schema and is owned by SYSADMIN. 
 */   
-use role sysadmin;
-create or replace view LOCATIONS.COMPETITION
-as
-select * 
-from OPENSTREETMAP_DENVER.DENVER.V_OSM_DEN_AMENITY_SUSTENANCE
-where 
-    ((amenity in ('fast_food','cafe','restaurant','juice_bar'))
-    and 
-    (name ilike '%jamba%' or name ilike '%juice%'
-     or name ilike '%superfruit%'))
- or 
-    (cuisine like '%smoothie%' or cuisine like '%juice%')
+USE ROLE sysadmin;
+CREATE OR REPLACE VIEW locations.competition
+AS
+SELECT * 
+FROM openstreetmap_denver.denver.v_osm_den_amenity_sustenance
+WHERE 
+  (
+    (amenity IN ('fast_food','cafe','restaurant','juice_bar'))
+    AND 
+    (
+      name ILIKE '%jamba%' OR name ILIKE '%juice%'
+      OR name ILIKE '%superfruit%'
+    )
+  )
+  OR 
+  (cuisine LIKE '%smoothie%' OR cuisine LIKE '%juice%')
 ;
 
 -- 🥋 Which Competitor is Closest to Melanie's?
 SELECT
- name
- ,cuisine
- , ST_DISTANCE(
-    st_makepoint('-104.97300245114094','39.76471253574085')
-    , coordinates
-  ) AS distance_to_melanies
- ,*
+  name,
+  cuisine,
+  ST_DISTANCE(
+    ST_MAKEPOINT('-104.97300245114094','39.76471253574085'),
+    coordinates
+  ) AS distance_to_melanies,
+  *
 FROM  competition
-ORDER by distance_to_melanies;
+ORDER BY distance_to_melanies;
 
 /*
 📓 Why Not Use the UDF We Just Created? 
@@ -234,26 +249,26 @@ We need a function that can accept the Sonra GEOGRAPHY object instead of two num
 🥋 Changing the Function to Accept a GEOGRAPHY Argument 
 */
 
-CREATE OR REPLACE FUNCTION distance_to_mc(lng_and_lat GEOGRAPHY)
-  RETURNS FLOAT
-  AS
-  $$
+CREATE OR REPLACE FUNCTION DISTANCE_TO_MC(lng_and_lat GEOGRAPHY)
+RETURNS FLOAT
+AS
+$$
    st_distance(
         st_makepoint('-104.97300245114094','39.76471253574085')
         ,lng_and_lat
         )
   $$
-  ;
+;
 
 -- 🥋 Now We Can Use it In Our Sonra Select
 
 SELECT
- name
- ,cuisine
- ,distance_to_mc(coordinates) AS distance_to_melanies
- ,*
+  name,
+  cuisine,
+  DISTANCE_TO_MC(coordinates) AS distance_to_melanies,
+  *
 FROM  competition
-ORDER by distance_to_melanies;  
+ORDER BY distance_to_melanies;  
 
 /*
 📓 What the Heck is Going On? 
@@ -268,25 +283,26 @@ This means we can run the function several different ways and they will all resu
 
 -- 🥋 Different Options, Same Outcome!
 -- Tattered Cover Bookstore McGregor Square
-set tcb_lng='-104.9956203'; 
-set tcb_lat='39.754874';
+SET tcb_lng='-104.9956203'; 
+SET tcb_lat='39.754874';
 
 --this will run the first version of the UDF
-select distance_to_mc($tcb_lng,$tcb_lat);
+SELECT DISTANCE_TO_MC($tcb_lng,$tcb_lat);
 
 --this will run the second version of the UDF, bc it converts the coords 
 --to a geography object before passing them into the function
-select distance_to_mc(st_makepoint($tcb_lng,$tcb_lat));
+SELECT DISTANCE_TO_MC(ST_MAKEPOINT($tcb_lng,$tcb_lat));
 
 --this will run the second version bc the Sonra Coordinates column
 -- contains geography objects already
-select name
-, distance_to_mc(coordinates) as distance_to_melanies 
-, ST_ASWKT(coordinates)
-from OPENSTREETMAP_DENVER.DENVER.V_OSM_DEN_SHOP
-where shop='books' 
-and name like '%Tattered Cover%'
-and addr_street like '%Wazee%';
+SELECT
+  name,
+  DISTANCE_TO_MC(coordinates) AS distance_to_melanies,
+  ST_ASWKT(coordinates)
+FROM openstreetmap_denver.denver.v_osm_den_shop
+WHERE shop='books' 
+  AND name LIKE '%Tattered Cover%'
+  AND addr_street LIKE '%Wazee%';
 
 /*
 🎯 Create a View of Bike Shops in the Denver Data
@@ -302,30 +318,33 @@ You can use a WHERE <column> = 'bicycle' -- you just have to figure out which co
 Be sure to include a column called DISTANCE_TO_MELANIES that calculates the distance to Melanie's Café for each Bike Shop
 
 */
-select *
-from OPENSTREETMAP_DENVER.DENVER.V_OSM_DEN_SHOP_OUTDOORS_AND_SPORT_VEHICLES
-limit 100
+SELECT *
+FROM openstreetmap_denver.denver.v_osm_den_shop_outdoors_and_sport_vehicles
+LIMIT 100
 ;
-create view denver_bike_shops as
-select name
-,st_distance(st_makepoint('-104.97300245114094','39.76471253574085'), coordinates) as distance_to_melanies
-,coordinates
-from OPENSTREETMAP_DENVER.DENVER.V_OSM_DEN_SHOP_OUTDOORS_AND_SPORT_VEHICLES
-where shop in ('bicycle');
+CREATE VIEW denver_bike_shops AS
+SELECT
+  name,
+  ST_DISTANCE(ST_MAKEPOINT('-104.97300245114094','39.76471253574085'), coordinates) AS distance_to_melanies,
+  coordinates
+FROM openstreetmap_denver.denver.v_osm_den_shop_outdoors_and_sport_vehicles
+WHERE shop IN ('bicycle');
 
-select *
-from denver_bike_shops
+SELECT *
+FROM denver_bike_shops
 ;
 
-use util_db.public;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from
-(
-  SELECT
-  'DLKW08' as step
-  ,( select truncate(distance_to_melanies)
-      from mels_smoothie_challenge_db.locations.denver_bike_shops
-      where name like '%Mojo%') as actual
-  ,14084 as expected
-  ,'Bike Shop View Distance Calc works' as description
- ); 
+USE util_db.public;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT
+      'DLKW08' AS step,
+      (
+        SELECT TRUNCATE(distance_to_melanies)
+        FROM mels_smoothie_challenge_db.locations.denver_bike_shops
+        WHERE name LIKE '%Mojo%'
+      ) AS actual,
+      14084 AS expected,
+      'Bike Shop View Distance Calc works' AS description
+  ); 
 

@@ -4,22 +4,22 @@ The most commonly used data types in the workshops so far have been VARCHAR and 
 */
 
 --🥋 Try This Fake Table to View Data Type Symbols
-use role sysadmin;
+USE ROLE sysadmin;
 
-create or replace table util_db.public.my_data_types
+CREATE OR REPLACE TABLE util_db.public.my_data_types
 (
-  my_number number
-, my_text varchar(10)
-, my_bool boolean
-, my_float float
-, my_date date
-, my_timestamp timestamp_tz
-, my_variant variant
-, my_array array
-, my_object object
-, my_geography geography
-, my_geometry geometry
-, my_vector vector(int,16)
+  my_number NUMBER,
+  my_text VARCHAR(10),
+  my_bool BOOLEAN,
+  my_float FLOAT,
+  my_date DATE,
+  my_timestamp TIMESTAMP_TZ,
+  my_variant VARIANT,
+  my_array ARRAY,
+  my_object OBJECT,
+  my_geography GEOGRAPHY,
+  my_geometry GEOMETRY,
+  my_vector VECTOR(int,16)
 );
 
 
@@ -61,18 +61,18 @@ Drop the PUBLIC schema
 Create a schema called PRODUCTS (make sure it is also owned by SYSADMIN). 
 */
 
-use role sysadmin;
-create database if not exists ZENAS_ATHLEISURE_DB;
-drop schema if exists public;
-create schema if not exists products;
+USE ROLE sysadmin;
+CREATE DATABASE IF NOT EXISTS zenas_athleisure_db;
+DROP SCHEMA IF EXISTS public;
+CREATE SCHEMA IF NOT EXISTS products;
 
 -- 🥋 Create an Internal Stage and Load the Sweatsuit Files Into It
 -- Download and unzip this file: sweatsuits.zip
-show stages in account;
+SHOW STAGES IN ACCOUNT;
 
-create stage if not exists ZENAS_ATHLEISURE_DB.products.sweatsuits
-encryption = (TYPE = 'SNOWFLAKE_SSE')
-comment = 'a place to hold files before loading them';
+CREATE STAGE IF NOT EXISTS zenas_athleisure_db.products.sweatsuits
+  ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE')
+  COMMENT = 'a place to hold files before loading them';
 
 /*
 🎯 Create Another Internal Stage
@@ -86,9 +86,9 @@ Load the files from this zip into the new stage:  metadata.zip
 At the end of this lab, you should have created one database, deleted one schema and created another (for a total of 2 schemas), and created 2 stages. 
 */
 
-create stage if not exists ZENAS_ATHLEISURE_DB.products.product_metadata
-encryption = (TYPE = 'SNOWFLAKE_FULL')
-comment = 'a place to hold files before loading them';
+CREATE STAGE IF NOT EXISTS zenas_athleisure_db.products.product_metadata
+  ENCRYPTION = (TYPE = 'SNOWFLAKE_FULL')
+  COMMENT = 'a place to hold files before loading them';
 
 /*
 📓  Revisiting the Warehouse Staging Metaphor, Again!!
@@ -112,19 +112,22 @@ REDEFINING THE WORD "STAGE" FOR SNOWFLAKE ADVANCED USE
 We already know that in the wider world of Data Warehousing, we can use the word "stage" to mean "a temporary storage location", and we can also use "stage" to mean a cloud folder where data is stored -- but now, more than ever, we should open our mind to the idea that a defined Snowflake Stage Object is most accurately thought of as a named gateway into a cloud folder where, presumably, data files are stored either short OR long term. 
 */
 
-use util_db.public;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from
-(
- SELECT
- 'DLKW01' as step
-  ,( select count(*)  
-      from ZENAS_ATHLEISURE_DB.INFORMATION_SCHEMA.STAGES 
-      where stage_schema = 'PRODUCTS'
-      and 
-      (stage_type = 'Internal Named' 
-      and stage_name = ('PRODUCT_METADATA'))
-      or stage_name = ('SWEATSUITS')
-   ) as actual
-, 2 as expected
-, 'Zena stages look good' as description
-); 
+USE util_db.public;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT
+      'DLKW01' AS step,
+      (
+        SELECT COUNT(*)  
+        FROM zenas_athleisure_db.information_schema.stages 
+        WHERE stage_schema = 'PRODUCTS'
+          AND 
+          (
+            stage_type = 'Internal Named' 
+            AND stage_name = ('PRODUCT_METADATA')
+          )
+          OR stage_name = ('SWEATSUITS')
+      ) AS actual,
+      2 AS expected,
+      'Zena stages look good' AS description
+  ); 

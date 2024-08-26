@@ -50,13 +50,13 @@ Did you use SYSADMIN when creating things? If not, transfer the ownership of eac
 Snowflake has some code templates available that can help you when creating objects. 
 */
 
-use role sysadmin;
-create database if not exists ags_game_audience;
-drop schema if exists public;
-create schema if not exists raw;
+USE ROLE sysadmin;
+CREATE DATABASE IF NOT EXISTS ags_game_audience;
+DROP SCHEMA IF EXISTS public;
+CREATE SCHEMA IF NOT EXISTS raw;
 
-create or replace table ags_game_audience.raw.game_logs (
-  raw_log variant
+CREATE OR REPLACE TABLE ags_game_audience.raw.game_logs (
+  raw_log VARIANT
 )
 ;
 
@@ -65,14 +65,14 @@ create or replace table ags_game_audience.raw.game_logs (
 
 NOTE: Notice one of the names has a dash and the other has an underscore. It's easy to get this mixed up. AWS bucket names cannot have underscores. Snowflake stage names cannot have dashes!!
 */
-create stage if not exists ags_game_audience.raw.uni_kishore
-url = 's3://uni-kishore'
+CREATE STAGE IF NOT EXISTS ags_game_audience.raw.uni_kishore
+  URL = 's3://uni-kishore'
 ;
 
 -- 🥋 Test the Stage & Have a Look Around
 -- Remember that a LIST command is a great way to make sure your stage is working and to get the names of files within the stage.  However, if you have Directory Table option turned on, you can just navigate the file structure by double-clicking to drill into folders. 
 
-list @ags_game_audience.raw.uni_kishore;
+LIST @ags_game_audience.raw.uni_kishore;
 
 /*
 🎯 Create a File Format
@@ -83,11 +83,11 @@ Now you that you know how to find and use code templates, you can use a code tem
 - Set the data file Type to JSON 
 - Set the Strip Outer Array Property to TRUE   (strip_outer_array = true)
 */
-use role sysadmin;
-create file format ags_game_audience.raw.FF_JSON_LOGS
-    type = 'JSON'
-    strip_outer_array = true
-    ;
+USE ROLE sysadmin;
+CREATE FILE FORMAT ags_game_audience.raw.ff_json_logs
+TYPE = 'JSON'
+STRIP_OUTER_ARRAY = TRUE
+;
 
 /*
 📓 Exploring the File Before Loading It
@@ -98,9 +98,10 @@ You also know from previous workshops that we can use a File Format to make the 
 A statement like the one below can help you check that both your stage and your file format are working correctly. 
 */
 
-select $1
-from @ags_game_audience.raw.uni_kishore/kickoff
-(file_format => ags_game_audience.raw.FF_JSON_LOGS)
+SELECT $1
+FROM
+  @ags_game_audience.raw.uni_kishore/kickoff
+  (FILE_FORMAT => ags_game_audience.raw.ff_json_logs)
 ;
 
 /*
@@ -111,9 +112,9 @@ Did you notice that we did not write out the file name in the FROM line? This is
 
 There are other ways to specify what files should be loaded and Snowflake gives you a lot of tools to further specify what will be loaded, but for now accept the general rule that by not naming the file, you are asking SNOWFLAKE to attempt to load ALL files the stage or stage/folder location. 
 */
-copy into ags_game_audience.raw.game_logs
-from @ags_game_audience.raw.uni_kishore/kickoff
-file_format = (format_name = ags_game_audience.raw.FF_JSON_LOGS)
+COPY INTO ags_game_audience.raw.game_logs
+FROM @ags_game_audience.raw.uni_kishore/kickoff
+FILE_FORMAT = (FORMAT_NAME = ags_game_audience.raw.ff_json_logs)
 ;
 
 /*
@@ -126,13 +127,13 @@ Include the original column RAW_LOG as the last column. We always like to be abl
 
 When your SELECT is complete, you should have 5 columns.  Four of the column names should MATCH the four keys of the key/value pairs shown in red above. 
 */
-select
-  raw_log:agent::text as agent
-  ,raw_log:user_event::text as user_event
-  ,raw_log:user_login::text as user_login
-  ,raw_log:datetime_iso8601::timestamp as datetime_iso8601
-  ,*
-from game_logs
+SELECT
+  raw_log:agent::TEXT AS agent,
+  raw_log:user_event::TEXT AS user_event,
+  raw_log:user_login::TEXT AS user_login,
+  raw_log:datetime_iso8601::TIMESTAMP AS datetime_iso8601,
+  *
+FROM game_logs
 ;
 
 /*
@@ -145,32 +146,32 @@ CREATE VIEW my_view as (select x,y,z);
 
 You just finished creating a nice select that makes Agnie's game logs easy to view. You will be wrapping that select statement in a view. Follow the guidelines below. 
 */
-CREATE VIEW raw.logs as
-select
-  raw_log:agent::text as agent
-  ,raw_log:user_event::text as user_event
-  ,raw_log:user_login::text as user_login
-  ,raw_log:datetime_iso8601::timestamp as datetime_iso8601
-  ,*
-from game_logs
+CREATE VIEW raw.logs AS
+SELECT
+  raw_log:agent::TEXT AS agent,
+  raw_log:user_event::TEXT AS user_event,
+  raw_log:user_login::TEXT AS user_login,
+  raw_log:datetime_iso8601::TIMESTAMP AS datetime_iso8601,
+  *
+FROM game_logs
 ;
 
-select *
-from raw.logs
+SELECT *
+FROM raw.logs
 ;
 
-use util_db.public;
+USE util_db.public;
 -- DO NOT EDIT THIS CODE
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from
-(
- SELECT
- 'DNGW01' as step
-  ,(
-      select count(*)  
-      from ags_game_audience.raw.logs
-      where is_timestamp_ntz(to_variant(datetime_iso8601))= TRUE 
-   ) as actual
-, 250 as expected
-, 'Project DB and Log File Set Up Correctly' as description
-); 
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT
+      'DNGW01' AS step,
+      (
+        SELECT COUNT(*)  
+        FROM ags_game_audience.raw.logs
+        WHERE IS_TIMESTAMP_NTZ(TO_VARIANT(datetime_iso8601))= TRUE 
+      ) AS actual,
+      250 AS expected,
+      'Project DB and Log File Set Up Correctly' AS description
+  ); 
 

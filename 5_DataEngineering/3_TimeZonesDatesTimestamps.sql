@@ -45,24 +45,24 @@ We can guess this because all Snowflake Trial Account use "America/Los_Angeles" 
 */
 
 --what time zone is your account(and/or session) currently set to? Is it -0700?
-select current_timestamp();
+SELECT CURRENT_TIMESTAMP();
 
 --worksheets are sometimes called sessions -- we'll be changing the worksheet time zone
-alter session set timezone = 'UTC';
-select current_timestamp();
+ALTER SESSION SET timezone = 'UTC';
+SELECT CURRENT_TIMESTAMP();
 
 --how did the time differ after changing the time zone for the worksheet?
-alter session set timezone = 'Africa/Nairobi';
-select current_timestamp();
+ALTER SESSION SET timezone = 'Africa/Nairobi';
+SELECT CURRENT_TIMESTAMP();
 
-alter session set timezone = 'Pacific/Funafuti';
-select current_timestamp();
+ALTER SESSION SET timezone = 'Pacific/Funafuti';
+SELECT CURRENT_TIMESTAMP();
 
-alter session set timezone = 'Asia/Shanghai';
-select current_timestamp();
+ALTER SESSION SET timezone = 'Asia/Shanghai';
+SELECT CURRENT_TIMESTAMP();
 
 --show the account parameter called timezone
-show parameters like 'timezone';
+SHOW PARAMETERS LIKE 'timezone';
 
 -- Snowflake uses the IANA list. You can see it here: https://data.iana.org/time-zones/tzdb-2021a/zone1970.tab
 
@@ -89,7 +89,7 @@ Look at some documentation, somewhere.
 Create your own test records and compare what you know to what flows through. 
 Most teams will use a combination of all three of the methods. Sometimes a team will use one method to start, and another to confirm.
 
-🖼️ The Team Members Each Take an "Action Item"
+🖼�\x8f The Team Members Each Take an "Action Item"
 split up the work
 
 Tsai is going to try to contact the game platform developers and see what they can tell her. 
@@ -99,21 +99,21 @@ Kishore is going to generate some test data he can use to compare what he knows 
 Agnie's going to see what she can find in the online documentation and online forums. 
 
 
-🖼️ Agnie Checks the Docs and Message Boards
+🖼�\x8f Agnie Checks the Docs and Message Boards
 docs
 
 Agnie searches the online documentation of the game platform but isn't able to learn how the datetime_iso8601 data is captured and stored. Different message board postings seem to contradict each other.
 
 She does find a list of fields she can add to the feed right away which is cool information, even if it wasn't actually what she was looking for. The list has a column that indicates which fields can be added for now and which are planned for future releases. She emails a link to the information to Kishore and Tsai. 
 
-🖼️ Kishore Generates Test Data
+🖼�\x8f Kishore Generates Test Data
 docs
 
 Kishore has his sister, Prajina, log in to the game for a few minutes of play time. As Prajina plays, Kishore keeps notes regarding the local times she starts and stops playing so that he can compare those events to what appears in the data they download next time.  
 
 He also looks over the list of available fields sent by Agnie. He decides the AGENT field isn't really needed but the IP_ADDRESS could be very helpful. He messages Tsai and Agnie his thoughts on the updated column list. 
 
-🖼️ Tsai Finds a Contact Who Works On the Game Platform
+🖼�\x8f Tsai Finds a Contact Who Works On the Game Platform
 docs
 
 A few days later, Tsai is able to get in touch with a member of game platform development team. The platform developer promises to research how the datetime_iso8601 field is captured, and see what they can uncover about whether the information is converted to UTC before being stored.
@@ -122,7 +122,7 @@ The developer is able to confirm that an LTZ field won't be available in the fee
 */
 
 /*
-🖼️ Agnie Downloads an Updated Log File!
+🖼�\x8f Agnie Downloads an Updated Log File!
 docs
 
 After confirming with Tsai and Kishore on Discord, Agnie adds IP_ADDRESS to the list of fields in the feed and removes AGENT. Then, she outputs a new file.
@@ -148,24 +148,25 @@ didn't break
 Good News! For Kishore, at least, the table did not have any issues accommodating the variation in the files. 
 */
 
-list @ags_game_audience.raw.uni_kishore/;
+LIST @ags_game_audience.raw.uni_kishore/;
 
 -- updated_feed/DNGW_updated_feed_0_0_0.json
 
-select $1
-from @ags_game_audience.raw.uni_kishore/updated_feed/DNGW_updated_feed_0_0_0.json
-(file_format => ags_game_audience.raw.FF_JSON_LOGS)
+SELECT $1
+FROM
+  @ags_game_audience.raw.uni_kishore/updated_feed/DNGW_updated_feed_0_0_0.json
+  (FILE_FORMAT => ags_game_audience.raw.ff_json_logs)
 ;
 
 
-select *
-from ags_game_audience.raw.game_logs
+SELECT *
+FROM ags_game_audience.raw.game_logs
 ;
 
 
-copy into ags_game_audience.raw.game_logs
-from @ags_game_audience.raw.uni_kishore/updated_feed/DNGW_updated_feed_0_0_0.json
-file_format = (format_name = ags_game_audience.raw.FF_JSON_LOGS)
+COPY INTO ags_game_audience.raw.game_logs
+FROM @ags_game_audience.raw.uni_kishore/updated_feed/DNGW_updated_feed_0_0_0.json
+FILE_FORMAT = (FORMAT_NAME = ags_game_audience.raw.ff_json_logs)
 ;
 
 /*
@@ -178,9 +179,9 @@ What field was removed? That column will be empty in the new rows.
 What column was added? The column will NOT be empty in the new rows. 
 */
 
-select *
-from ags_game_audience.raw.logs
-where agent is null
+SELECT *
+FROM ags_game_audience.raw.logs
+WHERE agent IS NULL
 ;
 
 /*
@@ -196,16 +197,16 @@ You may see the term "schema-on-read" noted in some articles and posts as a grea
 
 -- 🥋 Two Filtering Options
 --looking for empty AGENT column
-select * 
-from ags_game_audience.raw.LOGS
-where agent is null;
+SELECT * 
+FROM ags_game_audience.raw.logs
+WHERE agent IS NULL;
 
 --looking for non-empty IP_ADDRESS column
-select 
-RAW_LOG:ip_address::text as IP_ADDRESS
-,*
-from ags_game_audience.raw.LOGS
-where RAW_LOG:ip_address::text is not null;
+SELECT 
+  raw_log:ip_address::TEXT AS ip_address,
+  *
+FROM ags_game_audience.raw.logs
+WHERE raw_log:ip_address::TEXT IS NOT NULL;
 
 /*
 🎯 CHALLENGE: Update Your LOGS View
@@ -220,17 +221,17 @@ After the changes, your results should look like this:
 Now we see 284 rows and all of them have IP_ADDRESS information!
 */
 
-create or replace view ags_game_audience.raw.LOGS
-as
-select
+CREATE OR REPLACE VIEW ags_game_audience.raw.logs
+AS
+SELECT
   --raw_log:agent::text as agent
-  raw_log:ip_address::text as ip_address
-  ,raw_log:user_event::text as user_event
-  ,raw_log:user_login::text as user_login
-  ,raw_log:datetime_iso8601::timestamp as datetime_iso8601
-  ,*
-from ags_game_audience.raw.game_logs
-where ip_address is not null
+  raw_log:ip_address::TEXT AS ip_address,
+  raw_log:user_event::TEXT AS user_event,
+  raw_log:user_login::TEXT AS user_login,
+  raw_log:datetime_iso8601::TIMESTAMP AS datetime_iso8601,
+  *
+FROM ags_game_audience.raw.game_logs
+WHERE ip_address IS NOT NULL
 ;
 
 /*
@@ -267,24 +268,26 @@ When you think you've found Prajina's test records, can you use the timestamps y
 
 Finally, can you draw a conclusion as to whether the datetimes were recorded in LTZ or UTC?
 */
-select *
-from ags_game_audience.raw.logs
-where user_login ilike '%Prajina%'
+SELECT *
+FROM ags_game_audience.raw.logs
+WHERE user_login ILIKE '%Prajina%'
 ; -- princess_prajina
 
-use util_db.public;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from
-(
-SELECT
-   'DNGW02' as step
-   ,( select sum(tally) from(
-        select (count(*) * -1) as tally
-        from ags_game_audience.raw.logs 
-        union all
-        select count(*) as tally
-        from ags_game_audience.raw.game_logs)     
-     ) as actual
-   ,250 as expected
-   ,'View is filtered' as description
-); 
+USE util_db.public;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT
+      'DNGW02' AS step,
+      (
+        SELECT SUM(tally) FROM(
+          SELECT (COUNT(*) * -1) AS tally
+          FROM ags_game_audience.raw.logs 
+          UNION ALL
+          SELECT COUNT(*) AS tally
+          FROM ags_game_audience.raw.game_logs
+        )     
+      ) AS actual,
+      250 AS expected,
+      'View is filtered' AS description
+  ); 
 

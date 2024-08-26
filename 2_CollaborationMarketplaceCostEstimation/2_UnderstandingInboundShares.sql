@@ -23,20 +23,20 @@ For this reason, people at Snowflake often fall into the habit of calling it "th
 */
 
 -- Dropping the Sample Data Database
-use role accountadmin;
-drop database snowflake_sample_data;
+USE ROLE accountadmin;
+DROP DATABASE snowflake_sample_data;
 
 -- View Changes to the Private Sharing Page 
-    -- If the blue download button doesn't appear on the SAMPLE_DATA listing, just refresh the page (top right corner under the [Share] button. If that doesn't work, use the browser refresh button. 
+-- If the blue download button doesn't appear on the SAMPLE_DATA listing, just refresh the page (top right corner under the [Share] button. If that doesn't work, use the browser refresh button. 
 
 -- Adding the Sample Data Back (I named it as SFK_SAMPLE_DATA)
-    -- Web UI
-    -- Once the database appears in your account again, you may need to wait 10-15 seconds for the data to show up. Feel free to refresh as needed. 
+-- Web UI
+-- Once the database appears in your account again, you may need to wait 10-15 seconds for the data to show up. Feel free to refresh as needed. 
 
 -- Create a SQL Worksheet & Name It "CMCW Lesson 2"
 -- Setting the Sample Share Name Back to the Original Name
-alter database SFK_SAMPLE_DATA
-rename to snowflake_sample_data;
+ALTER DATABASE sfk_sample_data
+RENAME TO snowflake_sample_data;
 
 /*
 Challenge Lab: What Can You Do to the SNOWFLAKE Database?
@@ -48,22 +48,24 @@ HINT: There's a chance the Account Usage Share is a one-of-a-kind share and does
 */
 
 -- What Databases Can You See as SYSADMIN?
-    -- Remember Dropping and Adding the Sample Database?
-    -- We did not give any other role access to the database!
+-- Remember Dropping and Adding the Sample Database?
+-- We did not give any other role access to the database!
 
 -- Grant Privileges to the Share for the SYSADMIN Role?  
-grant imported privileges
-on database SNOWFLAKE_SAMPLE_DATA
-to role SYSADMIN;
+GRANT IMPORTED PRIVILEGES
+ON DATABASE snowflake_sample_data
+TO ROLE sysadmin;
 
 -- Use Select Statements to Look at Sample Data
 --Check the range of values in the Market Segment Column
 SELECT DISTINCT c_mktsegment
-FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.CUSTOMER;
+FROM snowflake_sample_data.tpch_sf1.customer;
 
 --Find out which Market Segments have the most customers
-SELECT c_mktsegment, COUNT(*)
-FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.CUSTOMER
+SELECT
+  c_mktsegment,
+  COUNT(*)
+FROM snowflake_sample_data.tpch_sf1.customer
 GROUP BY c_mktsegment
 ORDER BY COUNT(*);
 
@@ -71,26 +73,35 @@ ORDER BY COUNT(*);
 
 -- Join and Aggregate Shared Data
 -- Nations Table
-SELECT N_NATIONKEY, N_NAME, N_REGIONKEY
-FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.NATION;
+SELECT
+  n_nationkey,
+  n_name,
+  n_regionkey
+FROM snowflake_sample_data.tpch_sf1.nation;
 
 -- Regions Table
-SELECT R_REGIONKEY, R_NAME
-FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.REGION;
+SELECT
+  r_regionkey,
+  r_name
+FROM snowflake_sample_data.tpch_sf1.region;
 
 -- Join the Tables and Sort
-SELECT R_NAME as Region, N_NAME as Nation
-FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.NATION 
-JOIN SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.REGION 
-ON N_REGIONKEY = R_REGIONKEY
-ORDER BY R_NAME, N_NAME ASC;
+SELECT
+  r_name AS region,
+  n_name AS nation
+FROM snowflake_sample_data.tpch_sf1.nation 
+INNER JOIN snowflake_sample_data.tpch_sf1.region 
+  ON n_regionkey = r_regionkey
+ORDER BY r_name, n_name ASC;
 
 --Group and Count Rows Per Region
-SELECT R_NAME as Region, count(N_NAME) as NUM_COUNTRIES
-FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.NATION 
-JOIN SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.REGION 
-ON N_REGIONKEY = R_REGIONKEY
-GROUP BY R_NAME;
+SELECT
+  r_name AS region,
+  COUNT(n_name) AS num_countries
+FROM snowflake_sample_data.tpch_sf1.nation 
+INNER JOIN snowflake_sample_data.tpch_sf1.region 
+  ON n_regionkey = r_regionkey
+GROUP BY r_name;
 
 
 -- Export Native and Shared Data
@@ -102,40 +113,41 @@ The real value of consuming shared data is:
 */
 
 -- Set Your Default Role to SYSADMIN
-alter user calebhorst set default_role = sysadmin;
-alter user calebhorst set default_warehouse = compute_wh;
+ALTER USER calebhorst SET default_role = sysadmin;
+ALTER USER calebhorst SET default_warehouse = compute_wh;
 -- Check for Warehouses Accessible to SYSADMIN
-use role accountadmin;
-grant usage on warehouse compute_wh to role sysadmin;
+USE ROLE accountadmin;
+GRANT USAGE ON WAREHOUSE compute_wh TO ROLE sysadmin;
 
 
-show databases like 'UTIL_DB';
-desc database util_db;
+SHOW DATABASES LIKE 'UTIL_DB';
+DESC DATABASE util_db;
 
 
 
 -- Can You Find the Function Using Code? 
 -- where did you put the function?
-show user functions in account;
+SHOW USER FUNCTIONS IN ACCOUNT;
 
 -- did you put it here?
-select * 
-from util_db.information_schema.functions
-where function_name = 'GRADER'
-and function_catalog = 'UTIL_DB'
-and function_owner = 'ACCOUNTADMIN';
+SELECT * 
+FROM util_db.information_schema.functions
+WHERE function_name = 'GRADER'
+  AND function_catalog = 'UTIL_DB'
+  AND function_owner = 'ACCOUNTADMIN';
 
 -- Give the SYSADMIN Role Access to the Grader Function
-grant usage 
-on function UTIL_DB.PUBLIC.GRADER(VARCHAR, BOOLEAN, NUMBER, NUMBER, VARCHAR) 
-to SYSADMIN;
+GRANT USAGE 
+ON FUNCTION UTIL_DB.PUBLIC.GRADER(VARCHAR, BOOLEAN, NUMBER, NUMBER, VARCHAR) 
+TO sysadmin;
 
 -- Is DORA Working? Run This to Find Out!
-select GRADER(step,(actual = expected), actual, expected, description) as graded_results from (
-SELECT 'DORA_IS_WORKING' as step
- ,(select 223 ) as actual
- ,223 as expected
- ,'Dora is working!' as description
+SELECT GRADER(step,(actual = expected), actual, expected, description) AS graded_results FROM (
+  SELECT
+    'DORA_IS_WORKING' AS step,
+    (SELECT 223 ) AS actual,
+    223 AS expected,
+    'Dora is working!' AS description
 ); 
 
 -- Navigate to Your Cost Management Page

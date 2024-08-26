@@ -21,8 +21,8 @@ list @zenas_athleisure_db.products.product_metadata;
 
 How many columns are there, and how many rows (files)?  
 */
-use role sysadmin;
-list @zenas_athleisure_db.products.product_metadata;
+USE ROLE sysadmin;
+LIST @zenas_athleisure_db.products.product_metadata;
 
 /*
 📓 Simple Selects on Non-Loaded Data
@@ -45,12 +45,12 @@ Try it, and then go to the next page to see how we wrote our query.
 
 HINT: Add a / after the stage name and type in one of the fllenames.
 */
-use zenas_athleisure_db.products;
-select $1
-from @product_metadata; 
+USE zenas_athleisure_db.products;
+SELECT $1
+FROM @product_metadata; 
 
-select $1
-from @product_metadata/product_coordination_suggestions.txt; 
+SELECT $1
+FROM @product_metadata/product_coordination_suggestions.txt; 
 
 /*
 📓 What is Going On Here?
@@ -83,13 +83,14 @@ We can learn about our data by trying out some different file format settings. L
 🥋 Create an Exploratory File Format
 Let's create a file format to test whether the carets are supposed to separate one row from another.  We'll name our file formats starting with "ZMD" for "Zena's Metadata"?
 */
-create file format zenas_athleisure_db.products.zmd_file_format_1
+CREATE FILE FORMAT zenas_athleisure_db.products.zmd_file_format_1
 RECORD_DELIMITER = '^';
 
 -- 🥋 Use the Exploratory File Format in a Query
-select $1
-from @product_metadata/product_coordination_suggestions.txt
-(file_format => zmd_file_format_1);
+SELECT $1
+FROM
+  @product_metadata/product_coordination_suggestions.txt
+  (FILE_FORMAT => zmd_file_format_1);
 
 /*
 📓 An Alternate Theory
@@ -99,12 +100,23 @@ Let's create a second exploratory file format, and see what things look like whe
 */
 
 -- 🥋 Testing Our Second Theory
-create file format zenas_athleisure_db.products.zmd_file_format_2
+CREATE FILE FORMAT zenas_athleisure_db.products.zmd_file_format_2
 FIELD_DELIMITER = '^';  
 
-select $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-from @product_metadata/product_coordination_suggestions.txt
-(file_format => zmd_file_format_2);
+SELECT
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8,
+  $9,
+  $10
+FROM
+  @product_metadata/product_coordination_suggestions.txt
+  (FILE_FORMAT => zmd_file_format_2);
 
 /*
 🥋 A Third Possibility?
@@ -112,13 +124,16 @@ What if the carets separate records and a different symbol is used to separate t
 
 You'll need to define both the field delimiter and the row delimiter to make it work. Be sure to replace the question marks with the real delimiters!
 */
-create or replace file format zenas_athleisure_db.products.zmd_file_format_3
+CREATE OR REPLACE FILE FORMAT zenas_athleisure_db.products.zmd_file_format_3
 FIELD_DELIMITER = '='
 RECORD_DELIMITER = '^'; 
 
-select $1, $2
-from @product_metadata/product_coordination_suggestions.txt
-(file_format => zmd_file_format_3);
+SELECT
+  $1,
+  $2
+FROM
+  @product_metadata/product_coordination_suggestions.txt
+  (FILE_FORMAT => zmd_file_format_3);
 
 /*
 📓 Those Exploratory File Formats Could Be More Useful
@@ -136,12 +151,13 @@ You can either DROP the old file format and create a new one with the same name,
 
 Once you've replaced zmd_file_format_1, use it to query the sweatsuit_sizes.txt file. 
 */
-create or replace file format zenas_athleisure_db.products.zmd_file_format_1
+CREATE OR REPLACE FILE FORMAT zenas_athleisure_db.products.zmd_file_format_1
 RECORD_DELIMITER = ';';
 
-select $1 as sizes_available
-from @product_metadata/sweatsuit_sizes.txt
-(file_format => zmd_file_format_1 );
+SELECT $1 AS sizes_available
+FROM
+  @product_metadata/sweatsuit_sizes.txt
+  (FILE_FORMAT => zmd_file_format_1 );
 
 /*
 📓 Another, More Useful, File Format
@@ -155,13 +171,17 @@ Rewrite zmd_file_format_2 to parse swt_product_line.txt
 We want to write a file format that will display data as shown below. 
 */
 
-create or replace file format zenas_athleisure_db.products.zmd_file_format_2
+CREATE OR REPLACE FILE FORMAT zenas_athleisure_db.products.zmd_file_format_2
 FIELD_DELIMITER = '|'
 RECORD_DELIMITER = ';';
 
-select $1, $2, $3
-from @product_metadata/swt_product_line.txt
-(file_format => zmd_file_format_2 );
+SELECT
+  $1,
+  $2,
+  $3
+FROM
+  @product_metadata/swt_product_line.txt
+  (FILE_FORMAT => zmd_file_format_2 );
 
 /*
 🥋 One More Thing!
@@ -173,14 +193,18 @@ Some issues are resolved but others are not!
 
 We're going to fix the issues shown with the green rectangles in the next lab! Look back at the image of the raw file near the top of this page. What do you think is causing those? It can't be spaces because if it was, our TRIM_SPACE file format property added to the file format would have fixed them.
 */
-create or replace file format zenas_athleisure_db.products.zmd_file_format_2
+CREATE OR REPLACE FILE FORMAT zenas_athleisure_db.products.zmd_file_format_2
 FIELD_DELIMITER = '|'
 RECORD_DELIMITER = ';'
 TRIM_SPACE = TRUE;
 
-select $1, $2, $3
-from @product_metadata/swt_product_line.txt
-(file_format => zmd_file_format_2 );
+SELECT
+  $1,
+  $2,
+  $3
+FROM
+  @product_metadata/swt_product_line.txt
+  (FILE_FORMAT => zmd_file_format_2 );
 
 /*
 🎯 Make Sure All 3 File Formats Have a Trim Space Property
@@ -189,18 +213,18 @@ The [TRIM_SPACE = True] file format setting is a good thing to have in place for
 Even after doing this, we'll still see some weird spacing, so we have to infer it's not just extra white spaces. It must be some other character or characters that are causing the issues. 
 */
 
-create or replace file format zenas_athleisure_db.products.zmd_file_format_1
+CREATE OR REPLACE FILE FORMAT zenas_athleisure_db.products.zmd_file_format_1
 RECORD_DELIMITER = ';'
 TRIM_SPACE = TRUE
 ;
 
-create or replace file format zenas_athleisure_db.products.zmd_file_format_2
+CREATE OR REPLACE FILE FORMAT zenas_athleisure_db.products.zmd_file_format_2
 FIELD_DELIMITER = '|'
 RECORD_DELIMITER = ';'
 TRIM_SPACE = TRUE
 ;
 
-create or replace file format zenas_athleisure_db.products.zmd_file_format_3
+CREATE OR REPLACE FILE FORMAT zenas_athleisure_db.products.zmd_file_format_3
 FIELD_DELIMITER = '='
 RECORD_DELIMITER = '^'
 TRIM_SPACE = TRUE
@@ -220,10 +244,10 @@ In Snowflake, we can CONCATENATE two values by putting || between them (a double
 
  chr(13)||chr(10)
 */
-select
-    replace($1, chr(13)||chr(10)) as sizes_available
-from @product_metadata/sweatsuit_sizes.txt
-(file_format => zmd_file_format_1 )
+SELECT REPLACE($1, CHR(13)||CHR(10)) AS sizes_available
+FROM
+  @product_metadata/sweatsuit_sizes.txt
+  (FILE_FORMAT => zmd_file_format_1 )
 ; 
 /*
 📓 Other Options for the REPLACE() Function 
@@ -242,28 +266,28 @@ REPLACE($1, '\r\n')
 Like almost any task with SQL, there are options. You might have even another option in mind. 
 */
 
-select
-    replace($1, chr(13)||chr(10)) as sizes_available
-from @product_metadata/sweatsuit_sizes.txt
-(file_format => zmd_file_format_1 )
-where sizes_available <> ''
+SELECT REPLACE($1, CHR(13)||CHR(10)) AS sizes_available
+FROM
+  @product_metadata/sweatsuit_sizes.txt
+  (FILE_FORMAT => zmd_file_format_1 )
+WHERE sizes_available <> ''
 ; 
 
 /*
 🥋 Convert Your Select to a View
 Add this line above your select statement, to convert the SELECT statement to a view.
 */
-create or replace view zenas_athleisure_db.products.sweatsuit_sizes 
-as 
-select
-  replace($1, chr(13)||chr(10)) as sizes_available
-from @product_metadata/sweatsuit_sizes.txt
-(file_format => zmd_file_format_1 )
-where sizes_available <> ''
+CREATE OR REPLACE VIEW zenas_athleisure_db.products.sweatsuit_sizes 
+AS 
+SELECT REPLACE($1, CHR(13)||CHR(10)) AS sizes_available
+FROM
+  @product_metadata/sweatsuit_sizes.txt
+  (FILE_FORMAT => zmd_file_format_1 )
+WHERE sizes_available <> ''
 ; 
 
-select *
-from zenas_athleisure_db.products.sweatsuit_sizes 
+SELECT *
+FROM zenas_athleisure_db.products.sweatsuit_sizes 
 ;
 
 /*
@@ -277,24 +301,25 @@ If there are any weird, empty rows, remove them (also via the select statement).
 Put a view on top of it to make it easy to query in the future! Name your view:  zenas_athleisure_db.products.SWEATBAND_PRODUCT_LINE
 Don't forget to NAME the columns in your Create View statement. You can see the names you should use for your columns in the screenshot. 
 */
-create or replace file format zenas_athleisure_db.products.zmd_file_format_2
+CREATE OR REPLACE FILE FORMAT zenas_athleisure_db.products.zmd_file_format_2
 FIELD_DELIMITER = '|'
 RECORD_DELIMITER = ';'
 TRIM_SPACE = TRUE
 ;
 
-create or replace view zenas_athleisure_db.products.SWEATBAND_PRODUCT_LINE 
-as 
-select
-  replace($1, chr(13)||chr(10)) as product_code
-  ,$2 as headband_description
-  ,$3 as wristband_description
-from @product_metadata/swt_product_line.txt
-(file_format => ZMD_FILE_FORMAT_2 )
-where product_code <> ''
+CREATE OR REPLACE VIEW zenas_athleisure_db.products.sweatband_product_line 
+AS 
+SELECT
+  REPLACE($1, CHR(13)||CHR(10)) AS product_code,
+  $2 AS headband_description,
+  $3 AS wristband_description
+FROM
+  @product_metadata/swt_product_line.txt
+  (FILE_FORMAT => zmd_file_format_2 )
+WHERE product_code <> ''
 ; 
-select *
-from zenas_athleisure_db.products.SWEATBAND_PRODUCT_LINE 
+SELECT *
+FROM zenas_athleisure_db.products.sweatband_product_line 
 ;
 
 /*
@@ -307,41 +332,50 @@ Put a view on top of it to make it easy to query in the future! Name your view: 
 Give your view columns nice names!
 */
 
-create or replace view zenas_athleisure_db.products.SWEATBAND_COORDINATION 
-as 
-select
-  replace($1, chr(13)||chr(10)) as product_code
-  ,$2 as has_matching_sweatsuit
-from @product_metadata/product_coordination_suggestions.txt
-(file_format => ZMD_FILE_FORMAT_3 )
-where product_code <> ''
+CREATE OR REPLACE VIEW zenas_athleisure_db.products.sweatband_coordination 
+AS 
+SELECT
+  REPLACE($1, CHR(13)||CHR(10)) AS product_code,
+  $2 AS has_matching_sweatsuit
+FROM
+  @product_metadata/product_coordination_suggestions.txt
+  (FILE_FORMAT => zmd_file_format_3 )
+WHERE product_code <> ''
 ; 
-select *
-from zenas_athleisure_db.products.SWEATBAND_COORDINATION 
+SELECT *
+FROM zenas_athleisure_db.products.sweatband_coordination 
 ;
 
-use util_db.public;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from
-(
- SELECT
-   'DLKW02' as step
-   ,( select sum(tally) from
-        (select count(*) as tally
-        from ZENAS_ATHLEISURE_DB.PRODUCTS.SWEATBAND_PRODUCT_LINE
-        where length(product_code) > 7 
-        union
-        select count(*) as tally
-        from ZENAS_ATHLEISURE_DB.PRODUCTS.SWEATSUIT_SIZES
-        where LEFT(sizes_available,2) = char(13)||char(10))     
-     ) as actual
-   ,0 as expected
-   ,'Leave data where it lands.' as description
-); 
+USE util_db.public;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT
+      'DLKW02' AS step,
+      (
+        SELECT SUM(tally) FROM
+          (
+            SELECT COUNT(*) AS tally
+            FROM zenas_athleisure_db.products.sweatband_product_line
+            WHERE LENGTH(product_code) > 7 
+            UNION
+            SELECT COUNT(*) AS tally
+            FROM zenas_athleisure_db.products.sweatsuit_sizes
+            WHERE LEFT(sizes_available,2) = CHAR(13)||CHAR(10)
+          )     
+      ) AS actual,
+      0 AS expected,
+      'Leave data where it lands.' AS description
+  ); 
 
-select product_code, has_matching_sweatsuit
-from zenas_athleisure_db.products.sweatband_coordination;
-select product_code, headband_description, wristband_description
-from zenas_athleisure_db.products.sweatband_product_line;
+SELECT
+  product_code,
+  has_matching_sweatsuit
+FROM zenas_athleisure_db.products.sweatband_coordination;
+SELECT
+  product_code,
+  headband_description,
+  wristband_description
+FROM zenas_athleisure_db.products.sweatband_product_line;
 
-select sizes_available
-from zenas_athleisure_db.products.sweatsuit_sizes;
+SELECT sizes_available
+FROM zenas_athleisure_db.products.sweatsuit_sizes;

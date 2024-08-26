@@ -57,18 +57,18 @@ Download this file: cherry_creek_trail.parquet
 Load the parquet file into the Parquet stage you created. 
 */
 
-use role sysadmin;
-create database if not exists MELS_SMOOTHIE_CHALLENGE_DB;
-create schema trails;
-drop schema public;
+USE ROLE sysadmin;
+CREATE DATABASE IF NOT EXISTS mels_smoothie_challenge_db;
+CREATE SCHEMA trails;
+DROP SCHEMA public;
 
-create stage if not exists MELS_SMOOTHIE_CHALLENGE_DB.trails.TRAILS_GEOJSON
-encryption = (TYPE = 'SNOWFLAKE_SSE')
-comment = 'a place to hold files before loading them';
+CREATE STAGE IF NOT EXISTS mels_smoothie_challenge_db.trails.trails_geojson
+  ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE')
+  COMMENT = 'a place to hold files before loading them';
 
-create stage if not exists MELS_SMOOTHIE_CHALLENGE_DB.trails.TRAILS_PARQUET
-encryption = (TYPE = 'SNOWFLAKE_SSE')
-comment = 'a place to hold files before loading them';
+CREATE STAGE IF NOT EXISTS mels_smoothie_challenge_db.trails.trails_parquet
+  ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE')
+  COMMENT = 'a place to hold files before loading them';
 
 /*
 🥋 Create a Very Basic JSON File Format
@@ -85,38 +85,44 @@ Did you notice that EVEN THOUGH this data hasn't been loaded, we CAN use the "Se
 🎯 Query Your TRAILS_PARQUET Stage!
 Use the query above as an example and write a simple select statement for the data in your trails_parquet stage. 
 */
-use MELS_SMOOTHIE_CHALLENGE_DB.trails;
+USE mels_smoothie_challenge_db.trails;
 
-create file format ff_json
-type = 'JSON'
+CREATE FILE FORMAT ff_json
+TYPE = 'JSON'
 ;
 
-create file format ff_parquet
-type = 'PARQUET'
+CREATE FILE FORMAT ff_parquet
+TYPE = 'PARQUET'
 ;
 
-select *
-from @trails_geojson
-(file_format => ff_json);
+SELECT *
+FROM
+  @trails_geojson
+  (FILE_FORMAT => ff_json);
 
-select *
-from @trails_parquet
-(file_format => ff_parquet);
+SELECT *
+FROM
+  @trails_parquet
+  (FILE_FORMAT => ff_parquet);
 
-use util_db.public;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from
-(
-SELECT
-'DLKW05' as step
- ,( select sum(tally)
-   from
-     (select count(*) as tally
-      from mels_smoothie_challenge_db.information_schema.stages 
-      union all
-      select count(*) as tally
-      from mels_smoothie_challenge_db.information_schema.file_formats)) as actual
- ,4 as expected
- ,'Camila\'s Trail Data is Ready to Query' as description
- ); 
+USE util_db.public;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT
+      'DLKW05' AS step,
+      (
+        SELECT SUM(tally)
+        FROM
+          (
+            SELECT COUNT(*) AS tally
+            FROM mels_smoothie_challenge_db.information_schema.stages 
+            UNION ALL
+            SELECT COUNT(*) AS tally
+            FROM mels_smoothie_challenge_db.information_schema.file_formats
+          )
+      ) AS actual,
+      4 AS expected,
+      'Camila\'s Trail Data is Ready to Query' AS description
+  ); 
 
  

@@ -17,7 +17,7 @@ Run a LIST command on the SWEATSUITS Stage you created.
 
 What do you see? 
 */
-list @zenas_athleisure_db.products.SWEATSUITS;
+LIST @zenas_athleisure_db.products.SWEATSUITS;
 
 /*
 📓 Let's Query the Unstructured Unloaded Data!
@@ -32,8 +32,8 @@ Uh-oh! It's giving us an error message!
 🥋 Try to Query an Unstructured Data File
 */
 
-select $1
-from @zenas_athleisure_db.products.sweatsuits
+SELECT $1
+FROM @zenas_athleisure_db.products.sweatsuits
 ; 
 
 /*
@@ -44,9 +44,11 @@ Opening the image file in a simple text editor, she thinks it's likely that Snow
 
 🥋 Query with 2 Built-In Meta-Data Columns
 */
-use zenas_athleisure_db.products;
-select metadata$filename, metadata$file_row_number
-from @sweatsuits/._purple_sweatsuit.png;
+USE zenas_athleisure_db.products;
+SELECT
+  metadata$filename,
+  metadata$file_row_number
+FROM @sweatsuits/._purple_sweatsuit.png;
 
 /*
 🎯 Write a Query That Returns Something More Like a List Command
@@ -55,9 +57,11 @@ from @sweatsuits/._purple_sweatsuit.png;
 Use either the MAX function or a COUNT to get an idea of the comparative file size for all the files in the stage.
 */
 
-select metadata$filename, max(metadata$file_row_number) as num_rows
-from @sweatsuits
-group by 1
+SELECT
+  metadata$filename,
+  MAX(metadata$file_row_number) AS num_rows
+FROM @sweatsuits
+GROUP BY 1
 ;
 
 /*
@@ -75,8 +79,8 @@ It's a Directory Table. A directory table was set up on your Stage when you crea
 🥋 Query the Directory Table of a Stage
 */
 
-select * 
-from directory(@sweatsuits);
+SELECT * 
+FROM DIRECTORY(@sweatsuits);
 
 /*
 📓 What About Functions for Directory Tables?
@@ -87,11 +91,11 @@ Can she run functions on the columns? And if she creates a SELECT that makes her
 🥋 Start By Checking Whether Functions will Work on Directory Tables 
 */
 
-select 
-    REPLACE(relative_path, '._', ' ') as no_underscores_filename
-    ,REPLACE(no_underscores_filename, '.png') as just_words_filename
-    ,INITCAP(just_words_filename) as product_name
-from directory(@sweatsuits)
+SELECT 
+  REPLACE(relative_path, '._', ' ') AS no_underscores_filename,
+  REPLACE(no_underscores_filename, '.png') AS just_words_filename,
+  INITCAP(just_words_filename) AS product_name
+FROM DIRECTORY(@sweatsuits)
 ;
 
 /*
@@ -107,9 +111,8 @@ Now, can you nest them all into a single column and name it "PRODUCT_NAME"?
 
 Don't expect to get it right the first time unless you are experienced with SQL. Add the functions one at a time and then go on to add the next. Keep copies of each stage so if you mess up, you can go back to your last successful version. 
 */
-select 
-    initcap(replace(replace(replace(relative_path, '_', ' '), '.', ' '), 'png', ' ')) as product_name
-from directory(@sweatsuits)
+SELECT  INITCAP(REPLACE(REPLACE(REPLACE(relative_path, '_', ' '), '.', ' '), 'png', ' ')) AS product_name
+FROM DIRECTORY(@sweatsuits)
 ;
 
 /*
@@ -126,33 +129,32 @@ Let's work alongside Zena and give those things a try!
 */
 
 --create an internal table for some sweatsuit info
-create or replace table zenas_athleisure_db.products.sweatsuits (
-	color_or_style varchar(25),
-	file_name varchar(50),
-	price number(5,2)
+CREATE OR REPLACE TABLE zenas_athleisure_db.products.sweatsuits (
+  color_or_style VARCHAR(25),
+  file_name VARCHAR(50),
+  price NUMBER(5,2)
 );
 
 --fill the new table with some data
-insert into  zenas_athleisure_db.products.sweatsuits 
-          (color_or_style, file_name, price)
-values
- ('Burgundy', '._burgundy_sweatsuit.png',65)
-,('Charcoal Grey', '._charcoal_grey_sweatsuit.png',65)
-,('Forest Green', '._forest_green_sweatsuit.png',64)
-,('Navy Blue', '._navy_blue_sweatsuit.png',65)
-,('Orange', '._orange_sweatsuit.png',65)
-,('Pink', '._pink_sweatsuit.png',63)
-,('Purple', '._purple_sweatsuit.png',64)
-,('Red', '._red_sweatsuit.png',68)
-,('Royal Blue',	'._royal_blue_sweatsuit.png',65)
-,('Yellow', '._yellow_sweatsuit.png',67);
+INSERT INTO  zenas_athleisure_db.products.sweatsuits 
+(color_or_style, file_name, price)
+VALUES
+('Burgundy', '._burgundy_sweatsuit.png',65),
+('Charcoal Grey', '._charcoal_grey_sweatsuit.png',65),
+('Forest Green', '._forest_green_sweatsuit.png',64),
+('Navy Blue', '._navy_blue_sweatsuit.png',65),
+('Orange', '._orange_sweatsuit.png',65),
+('Pink', '._pink_sweatsuit.png',63),
+('Purple', '._purple_sweatsuit.png',64),
+('Red', '._red_sweatsuit.png',68),
+('Royal Blue',	'._royal_blue_sweatsuit.png',65),
+('Yellow', '._yellow_sweatsuit.png',67);
 
 -- 🎯 Can You Join These?
 -- This challenge lab does not include step-by-step details. Can you join the directory table and the new sweatsuits table?
-select 
-    initcap(replace(replace(replace(relative_path, '_', ' '), '.', ' '), 'png', ' ')) as product_name
-from directory(@sweatsuits) as d
-inner join zenas_athleisure_db.products.sweatsuits as s on d.relative_path = s.file_name
+SELECT  INITCAP(REPLACE(REPLACE(REPLACE(relative_path, '_', ' '), '.', ' '), 'png', ' ')) AS product_name
+FROM DIRECTORY(@sweatsuits) AS d
+INNER JOIN zenas_athleisure_db.products.sweatsuits AS s ON d.relative_path = s.file_name
 ;
 
 /*
@@ -161,20 +163,20 @@ Narrow down the columns available so that you return results like those shown be
 
 Create a view named PRODUCT_LIST. 
 */
-create or replace view zenas_athleisure_db.products.PRODUCT_LIST
-as
-select 
-  initcap(replace(replace(replace(d.relative_path, '_', ' '), '.', ' '), 'png', ' ')) as product_name
-  ,s.file_name
-  ,s.color_or_style
-  ,s.price::number(38,2) as price
-  ,d.file_url
-from directory(@sweatsuits) as d
-inner join zenas_athleisure_db.products.sweatsuits as s on d.relative_path = s.file_name
+CREATE OR REPLACE VIEW zenas_athleisure_db.products.product_list
+AS
+SELECT 
+  INITCAP(REPLACE(REPLACE(REPLACE(d.relative_path, '_', ' '), '.', ' '), 'png', ' ')) AS product_name,
+  s.file_name,
+  s.color_or_style,
+  s.price::NUMBER(38,2) AS price,
+  d.file_url
+FROM DIRECTORY(@sweatsuits) AS d
+INNER JOIN zenas_athleisure_db.products.sweatsuits AS s ON d.relative_path = s.file_name
 ;
 
-select *
-from zenas_athleisure_db.products.PRODUCT_LIST
+SELECT *
+FROM zenas_athleisure_db.products.product_list
 ;
 
 /*
@@ -189,32 +191,32 @@ If Zena were building a REAL athleisure website, she wouldn't want to offer ever
 
 🥋 Add the CROSS JOIN 
 */
-select * 
-from product_list p
-cross join sweatsuit_sizes;
+SELECT * 
+FROM product_list ASp
+CROSS JOIN sweatsuit_sizes;
 
-create or replace view zenas_athleisure_db.products.catalog
-as
-select * 
-from product_list p
-cross join sweatsuit_sizes
+CREATE OR REPLACE VIEW zenas_athleisure_db.products.catalog
+AS
+SELECT * 
+FROM product_list ASp
+CROSS JOIN sweatsuit_sizes
 ;
 
 -- The CATALOG view should return 180 rows. 
-select *
-from zenas_athleisure_db.products.catalog
+SELECT *
+FROM zenas_athleisure_db.products.catalog
 ;
 
 
-use util_db.public;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from
-(
- SELECT
- 'DLKW03' as step
- ,( select count(*) from ZENAS_ATHLEISURE_DB.PRODUCTS.CATALOG) as actual
- ,180 as expected
- ,'Cross-joined view exists' as description
-); 
+USE util_db.public;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT
+      'DLKW03' AS step,
+      ( SELECT COUNT(*) FROM zenas_athleisure_db.products.catalog) AS actual,
+      180 AS expected,
+      'Cross-joined view exists' AS description
+  ); 
 
 /*
 📓 What is a Data Lake?
@@ -255,25 +257,25 @@ She also added a quick internal table and used that in a join with her non-loade
 */
 
 -- Add a table to map the sweatsuits to the sweat band sets
-create table zenas_athleisure_db.products.upsell_mapping
+CREATE TABLE zenas_athleisure_db.products.upsell_mapping
 (
-sweatsuit_color_or_style varchar(25)
-,upsell_product_code varchar(10)
+  sweatsuit_color_or_style VARCHAR(25),
+  upsell_product_code VARCHAR(10)
 );
 
 --populate the upsell table
-insert into zenas_athleisure_db.products.upsell_mapping
+INSERT INTO zenas_athleisure_db.products.upsell_mapping
 (
-sweatsuit_color_or_style
-,upsell_product_code 
+  sweatsuit_color_or_style,
+  upsell_product_code 
 )
 VALUES
-('Charcoal Grey','SWT_GRY')
-,('Forest Green','SWT_FGN')
-,('Orange','SWT_ORG')
-,('Pink', 'SWT_PNK')
-,('Red','SWT_RED')
-,('Yellow', 'SWT_YLW');
+('Charcoal Grey','SWT_GRY'),
+('Forest Green','SWT_FGN'),
+('Orange','SWT_ORG'),
+('Pink', 'SWT_PNK'),
+('Red','SWT_RED'),
+('Yellow', 'SWT_YLW');
 
 /*
 📓 When Data is Left Where it Lands...
@@ -292,38 +294,45 @@ What do you think of the view below? Zena just wrote for her website prototype. 
 */
 
 -- Zena needs a single view she can query for her website prototype
-use zenas_athleisure_db.products;
-create view catalog_for_website as 
-select color_or_style
-,price
-,file_name
-, get_presigned_url(@sweatsuits, file_name, 3600) as file_url
-,size_list
-,coalesce('Consider: ' ||  headband_description || ' & ' || wristband_description, 'Consider: White, Black or Grey Sweat Accessories')  as upsell_product_desc
-from
-(   select color_or_style, price, file_name
-    ,listagg(sizes_available, ' | ') within group (order by sizes_available) as size_list
-    from catalog
-    group by color_or_style, price, file_name
-) c
-left join upsell_mapping u
-on u.sweatsuit_color_or_style = c.color_or_style
-left join sweatband_coordination sc
-on sc.product_code = u.upsell_product_code
-left join sweatband_product_line spl
-on spl.product_code = sc.product_code;
-
-use util_db.public;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from
-(
+USE zenas_athleisure_db.products;
+CREATE VIEW catalog_for_website AS 
 SELECT
-'DLKW04' as step
- ,( select count(*) 
-  from zenas_athleisure_db.products.catalog_for_website 
-  where upsell_product_desc not like '%e, Bl%') as actual
- ,6 as expected
- ,'Relentlessly resourceful' as description
-); 
+  color_or_style,
+  price,
+  file_name,
+  GET_PRESIGNED_URL(@sweatsuits, file_name, 3600) AS file_url,
+  size_list,
+  COALESCE('Consider: ' ||  headband_description || ' & ' || wristband_description, 'Consider: White, Black or Grey Sweat Accessories')  AS upsell_product_desc
+FROM
+  (
+    SELECT
+      color_or_style,
+      price,
+      file_name,
+      LISTAGG(sizes_available, ' | ') WITHIN GROUP (ORDER BY sizes_available) AS size_list
+    FROM catalog
+    GROUP BY color_or_style, price, file_name
+  ) ASc
+LEFT JOIN upsell_mapping ASu
+  ON c.color_or_style = u.sweatsuit_color_or_style
+LEFT JOIN sweatband_coordination ASsc
+  ON u.upsell_product_code = sc.product_code
+LEFT JOIN sweatband_product_line ASspl
+  ON sc.product_code = spl.product_code;
+
+USE util_db.public;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT
+      'DLKW04' AS step,
+      (
+        SELECT COUNT(*) 
+        FROM zenas_athleisure_db.products.catalog_for_website 
+        WHERE upsell_product_desc NOT LIKE '%e, Bl%'
+      ) AS actual,
+      6 AS expected,
+      'Relentlessly resourceful' AS description
+  ); 
 
 /*
 🖼️  Zena's Web Catalog Prototype! 

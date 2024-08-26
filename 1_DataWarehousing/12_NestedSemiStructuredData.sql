@@ -1,83 +1,90 @@
 -- Create a Table & File Format for Nested JSON Data
 // Create an Ingestion Table for the NESTED JSON Data
-CREATE OR REPLACE TABLE LIBRARY_CARD_CATALOG.PUBLIC.NESTED_INGEST_JSON 
+CREATE OR REPLACE TABLE library_card_catalog.public.nested_ingest_json 
 (
   "RAW_NESTED_BOOK" VARIANT
 );
 
 -- Load table with file data
-use role accountadmin;
-select $1
-from @util_db.public.my_internal_stage/json_book_author_nested.txt
-(file_format => library_card_catalog.public.json_file_format)
+USE ROLE accountadmin;
+SELECT $1
+FROM
+  @util_db.public.my_internal_stage/json_book_author_nested.txt
+  (FILE_FORMAT => library_card_catalog.public.json_file_format)
 ;
 
-copy into library_card_catalog.public.NESTED_INGEST_JSON
-from @util_db.public.my_internal_stage
-files = ( 'json_book_author_nested.txt')
-file_format = ( format_name=library_card_catalog.public.json_file_format )
+COPY INTO library_card_catalog.public.nested_ingest_json
+FROM @util_db.public.my_internal_stage
+FILES = ( 'json_book_author_nested.txt')
+FILE_FORMAT = ( FORMAT_NAME=library_card_catalog.public.json_file_format )
 ;
 
 -- Query the Nested JSON Data
-use library_card_catalog.public;
+USE library_card_catalog.public;
 
 //a few simple queries
-SELECT RAW_NESTED_BOOK
-FROM NESTED_INGEST_JSON;
+SELECT raw_nested_book
+FROM nested_ingest_json;
 
-SELECT RAW_NESTED_BOOK:year_published
-FROM NESTED_INGEST_JSON;
+SELECT raw_nested_book:year_published
+FROM nested_ingest_json;
 
-SELECT RAW_NESTED_BOOK:authors
-FROM NESTED_INGEST_JSON;
+SELECT raw_nested_book:authors
+FROM nested_ingest_json;
 
 //Use these example flatten commands to explore flattening the nested book and author data
 SELECT value:first_name
-FROM NESTED_INGEST_JSON
-,LATERAL FLATTEN(input => RAW_NESTED_BOOK:authors);
+FROM nested_ingest_json,
+  LATERAL FLATTEN(input => raw_nested_book:authors);
 
 SELECT value:first_name
-FROM NESTED_INGEST_JSON
-,table(flatten(RAW_NESTED_BOOK:authors));
+FROM nested_ingest_json,
+  TABLE(FLATTEN(raw_nested_book:authors));
 
 //Add a CAST command to the fields returned
-SELECT value:first_name::VARCHAR, value:last_name::VARCHAR
-FROM NESTED_INGEST_JSON
-,LATERAL FLATTEN(input => RAW_NESTED_BOOK:authors);
+SELECT
+  value:first_name::VARCHAR,
+  value:last_name::VARCHAR
+FROM nested_ingest_json,
+  LATERAL FLATTEN(input => raw_nested_book:authors);
 
 //Assign new column  names to the columns using "AS"
-SELECT value:first_name::VARCHAR AS FIRST_NM
-, value:last_name::VARCHAR AS LAST_NM
-FROM NESTED_INGEST_JSON
-,LATERAL FLATTEN(input => RAW_NESTED_BOOK:authors);
+SELECT
+  value:first_name::VARCHAR AS first_nm,
+  value:last_name::VARCHAR AS last_nm
+FROM nested_ingest_json,
+  LATERAL FLATTEN(input => raw_nested_book:authors);
 
 
 -- Set your worksheet drop lists. DO NOT EDIT THE DORA CODE.
-use role accountadmin;
-use util_db.public;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from (   
-     SELECT 'DWW17' as step 
-      ,( select row_count 
-        from LIBRARY_CARD_CATALOG.INFORMATION_SCHEMA.TABLES 
-        where table_name = 'NESTED_INGEST_JSON') as actual 
-      , 5 as expected 
-      ,'Check number of rows' as description  
+USE ROLE accountadmin;
+USE util_db.public;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM (   
+  SELECT
+    'DWW17' AS step,
+    (
+      SELECT row_count 
+      FROM library_card_catalog.information_schema.tables 
+      WHERE table_name = 'NESTED_INGEST_JSON'
+    ) AS actual,
+    5 AS expected,
+    'Check number of rows' AS description  
 ); 
 
 -- Create a Database, Table & File Format for Nested JSON Data
 //Create a new database to hold the Twitter file
-CREATE DATABASE SOCIAL_MEDIA_FLOODGATES 
+CREATE DATABASE social_media_floodgates 
 COMMENT = 'There\'s so much data from social media - flood warning';
 
-USE DATABASE SOCIAL_MEDIA_FLOODGATES;
+USE DATABASE social_media_floodgates;
 
 //Create a table in the new database
-CREATE TABLE SOCIAL_MEDIA_FLOODGATES.PUBLIC.TWEET_INGEST 
+CREATE TABLE social_media_floodgates.public.tweet_ingest 
 ("RAW_STATUS" VARIANT) 
 COMMENT = 'Bring in tweets, one row per tweet or status entity';
 
 //Create a JSON file format in the new database
-CREATE FILE FORMAT SOCIAL_MEDIA_FLOODGATES.PUBLIC.JSON_FILE_FORMAT 
+CREATE FILE FORMAT social_media_floodgates.public.json_file_format 
 TYPE = 'JSON' 
 COMPRESSION = 'AUTO' 
 ENABLE_OCTAL = FALSE 
@@ -88,126 +95,136 @@ IGNORE_UTF8_ERRORS = FALSE;
 
 -- Load and View the Nested JSON File 
 -- Upload the data into the new table of the new database you just created. Use the file format you just created. 
-use role accountadmin;
-select $1
-from @util_db.public.my_internal_stage/nutrition_tweets.json
-(file_format => SOCIAL_MEDIA_FLOODGATES.PUBLIC.JSON_FILE_FORMAT)
+USE ROLE accountadmin;
+SELECT $1
+FROM
+  @util_db.public.my_internal_stage/nutrition_tweets.json
+  (FILE_FORMAT => social_media_floodgates.public.json_file_format)
 ;
 
-copy into SOCIAL_MEDIA_FLOODGATES.PUBLIC.TWEET_INGEST
-from @util_db.public.my_internal_stage
-files = ( 'nutrition_tweets.json')
-file_format = ( format_name=SOCIAL_MEDIA_FLOODGATES.PUBLIC.JSON_FILE_FORMAT )
+COPY INTO social_media_floodgates.public.tweet_ingest
+FROM @util_db.public.my_internal_stage
+FILES = ( 'nutrition_tweets.json')
+FILE_FORMAT = ( FORMAT_NAME=social_media_floodgates.public.json_file_format )
 ;
 
 -- After loading, view the rows in the table. 
-select *
-from SOCIAL_MEDIA_FLOODGATES.PUBLIC.TWEET_INGEST
+SELECT *
+FROM social_media_floodgates.public.tweet_ingest
 ;
 
 -- Query the Nested JSON Tweet Data!
 //select statements as seen in the video
-SELECT RAW_STATUS
-FROM TWEET_INGEST;
+SELECT raw_status
+FROM tweet_ingest;
 
-SELECT RAW_STATUS:entities
-FROM TWEET_INGEST;
+SELECT raw_status:entities
+FROM tweet_ingest;
 
-SELECT RAW_STATUS:entities:hashtags
-FROM TWEET_INGEST;
+SELECT raw_status:entities:hashtags
+FROM tweet_ingest;
 
 //Explore looking at specific hashtags by adding bracketed numbers
 //This query returns just the first hashtag in each tweet
-SELECT RAW_STATUS:entities:hashtags[0].text
-FROM TWEET_INGEST;
+SELECT raw_status:entities:hashtags[0].text
+FROM tweet_ingest;
 
 //This version adds a WHERE clause to get rid of any tweet that 
 //doesn't include any hashtags
-SELECT RAW_STATUS:entities:hashtags[0].text
-FROM TWEET_INGEST
-WHERE RAW_STATUS:entities:hashtags[0].text is not null;
+SELECT raw_status:entities:hashtags[0].text
+FROM tweet_ingest
+WHERE raw_status:entities:hashtags[0].text IS NOT NULL;
 
 //Perform a simple CAST on the created_at key
 //Add an ORDER BY clause to sort by the tweet's creation date
-SELECT RAW_STATUS:created_at::DATE
-FROM TWEET_INGEST
-ORDER BY RAW_STATUS:created_at::DATE;
+SELECT raw_status:created_at::DATE
+FROM tweet_ingest
+ORDER BY raw_status:created_at::DATE;
 
 //Flatten statements that return the whole hashtag entity
 SELECT value
-FROM TWEET_INGEST
-,LATERAL FLATTEN
-(input => RAW_STATUS:entities:hashtags);
+FROM tweet_ingest
+,
+  LATERAL FLATTEN(input => raw_status:entities:hashtags);
 
 SELECT value
-FROM TWEET_INGEST
-,TABLE(FLATTEN(RAW_STATUS:entities:hashtags));
+FROM tweet_ingest,
+  TABLE(FLATTEN(raw_status:entities:hashtags));
 
 //Flatten statement that restricts the value to just the TEXT of the hashtag
 SELECT value:text
-FROM TWEET_INGEST
-,LATERAL FLATTEN
-(input => RAW_STATUS:entities:hashtags);
+FROM tweet_ingest
+,
+  LATERAL FLATTEN(input => raw_status:entities:hashtags);
 
 
 //Flatten and return just the hashtag text, CAST the text as VARCHAR
 SELECT value:text::VARCHAR
-FROM TWEET_INGEST
-,LATERAL FLATTEN
-(input => RAW_STATUS:entities:hashtags);
+FROM tweet_ingest
+,
+  LATERAL FLATTEN(input => raw_status:entities:hashtags);
 
 //Flatten and return just the hashtag text, CAST the text as VARCHAR
 // Use the AS command to name the column
-SELECT value:text::VARCHAR AS THE_HASHTAG
-FROM TWEET_INGEST
-,LATERAL FLATTEN
-(input => RAW_STATUS:entities:hashtags);
+SELECT value:text::VARCHAR AS the_hashtag
+FROM tweet_ingest
+,
+  LATERAL FLATTEN(input => raw_status:entities:hashtags);
 
 //Add the Tweet ID and User ID to the returned table
-SELECT RAW_STATUS:user:id AS USER_ID
-,RAW_STATUS:id AS TWEET_ID
-,value:text::VARCHAR AS HASHTAG_TEXT
-FROM TWEET_INGEST
-,LATERAL FLATTEN
-(input => RAW_STATUS:entities:hashtags);
+SELECT
+  raw_status:user:id AS user_id,
+  raw_status:id AS tweet_id,
+  value:text::VARCHAR AS hashtag_text
+FROM tweet_ingest
+,
+  LATERAL FLATTEN(input => raw_status:entities:hashtags);
 
 
 -- Set your worksheet drop lists. DO NOT EDIT THE DORA CODE.
-use role accountadmin;
-use util_db.public;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from
-(
-   SELECT 'DWW18' as step
-  ,( select row_count 
-    from SOCIAL_MEDIA_FLOODGATES.INFORMATION_SCHEMA.TABLES 
-    where table_name = 'TWEET_INGEST') as actual
-  , 9 as expected
-  ,'Check number of rows' as description  
- ); 
+USE ROLE accountadmin;
+USE util_db.public;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT
+      'DWW18' AS step,
+      (
+        SELECT row_count 
+        FROM social_media_floodgates.information_schema.tables 
+        WHERE table_name = 'TWEET_INGEST'
+      ) AS actual,
+      9 AS expected,
+      'Check number of rows' AS description  
+  ); 
 
 -- Create a View of the Tweet Data Looking "Normalized"
-create or replace view SOCIAL_MEDIA_FLOODGATES.PUBLIC.HASHTAGS_NORMALIZED as
-(SELECT RAW_STATUS:user:id AS USER_ID
-,RAW_STATUS:id AS TWEET_ID
-,value:text::VARCHAR AS HASHTAG_TEXT
-FROM SOCIAL_MEDIA_FLOODGATES.PUBLIC.TWEET_INGEST
-,LATERAL FLATTEN
-(input => RAW_STATUS:entities:hashtags)
+CREATE OR REPLACE VIEW social_media_floodgates.public.hashtags_normalized AS
+(
+  SELECT
+    raw_status:user:id AS user_id,
+    raw_status:id AS tweet_id,
+    value:text::VARCHAR AS hashtag_text
+  FROM social_media_floodgates.public.tweet_ingest
+  ,
+    LATERAL FLATTEN(input => raw_status:entities:hashtags)
 );
 
 -- Set your worksheet drop lists. DO NOT EDIT THE DORA CODE.
-use role accountadmin;
-use util_db.public;
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from
-(
-  SELECT 'DWW19' as step
-  ,( select count(*) 
-    from SOCIAL_MEDIA_FLOODGATES.INFORMATION_SCHEMA.VIEWS 
-    where table_name = 'HASHTAGS_NORMALIZED') as actual
-  , 1 as expected
-  ,'Check number of rows' as description
- ); 
+USE ROLE accountadmin;
+USE util_db.public;
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM
+  (
+    SELECT
+      'DWW19' AS step,
+      (
+        SELECT COUNT(*) 
+        FROM social_media_floodgates.information_schema.views 
+        WHERE table_name = 'HASHTAGS_NORMALIZED'
+      ) AS actual,
+      1 AS expected,
+      'Check number of rows' AS description
+  ); 
 
 
- select current_account() as account_locator;
-select current_organization_name()||'.'||current_account_name() as account_id;
+SELECT CURRENT_ACCOUNT() AS account_locator;
+SELECT CURRENT_ORGANIZATION_NAME()||'.'||CURRENT_ACCOUNT_NAME() AS account_id;

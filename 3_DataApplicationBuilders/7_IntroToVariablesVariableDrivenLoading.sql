@@ -8,20 +8,20 @@ NOTE: A worksheet is considered a "session" in Snowflake.
 */
 
 -- 🥋 Create & Set a Local SQL Variable
-set mystery_bag = 'What is in here?';
+SET mystery_bag = 'What is in here?';
 
 -- 🥋 Run a Select that Displays the Variable
-select $mystery_bag;
+SELECT $mystery_bag;
 
 -- 🥋 Change the Value and Run the Select Again
-set mystery_bag = 'This bag is empty!';
-select $mystery_bag;
+SET mystery_bag = 'This bag is empty!';
+SELECT $mystery_bag;
 
 -- 🥋 Do More With More Variables
-set var1 = 2;
-set var2 = 5;
-set var3 = 7;
-select $var1 + $var2 + $var3;
+SET var1 = 2;
+SET var2 = 5;
+SET var3 = 7;
+SELECT $var1 + $var2 + $var3;
 
 /*
 📓  What is a Function?
@@ -37,22 +37,22 @@ We'll create a simple function that adds three numbers together. Notice that we 
 */
 -- 🥋 Create a Simple User Defined Function (UDF)
 -- NOTE: Put your function in your UTIL_DB database!
-use role sysadmin;
-use util_db.public;
-create function if not exists sum_mystery_bag_vars (
-    var1 number
-    ,var2 number
-    ,var3 number
+USE ROLE sysadmin;
+USE util_db.public;
+CREATE FUNCTION IF NOT EXISTS SUM_MYSTERY_BAG_VARS (
+  var1 NUMBER,
+  var2 NUMBER,
+  var3 NUMBER
 )
-returns number
-as
+RETURNS NUMBER
+AS
 $$
 select var1 + var2 + var3
 $$
 ;
 
 -- 🥋 Run Your New Function
-select util_db.public.sum_mystery_bag_vars(12,36,204); -- 252
+SELECT util_db.public.sum_mystery_bag_vars(12,36,204); -- 252
 
 /*
 📓  Where Did the $$$'s Go?
@@ -62,10 +62,10 @@ Compare the code below to the code from the previous lab, above and make sure yo
 */
 
 -- 🥋 Combine Local Variables & Function Calls
-set eeny  = 4;
-set meeny = 37.2;
-set miney_mo = -39;
-select util_db.public.sum_mystery_bag_vars($eeny, $meeny, $miney_mo); -- 2.2
+SET eeny  = 4;
+SET meeny = 37.2;
+SET miney_mo = -39;
+SELECT util_db.public.sum_mystery_bag_vars($eeny, $meeny, $miney_mo); -- 2.2
 
 /*
 📓This, That & The Other!!
@@ -80,16 +80,17 @@ The variable values should be set to:
 -- Set your worksheet drop lists
 
 -- Set these local variables according to the instructions
-set this = -10.5;
-set that = 2;
-set the_other =  1000;
+SET this = -10.5;
+SET that = 2;
+SET the_other =  1000;
 
 -- DO NOT EDIT ANYTHING BELOW THIS LINE
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from (
-  SELECT 'DABW006' as step
- ,( select util_db.public.sum_mystery_bag_vars($this,$that,$the_other)) as actual
- , 991.5 as expected
- ,'Mystery Bag Function Output' as description
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM (
+  SELECT
+    'DABW006' AS step,
+    ( SELECT util_db.public.sum_mystery_bag_vars($this,$that,$the_other)) AS actual,
+    991.5 AS expected,
+    'Mystery Bag Function Output' AS description
 );
 
 /*
@@ -101,8 +102,8 @@ You can learn about the various system functions by looking in docs.snowflake.co
 In the next lab, we'll use a system function called INITCAP() to update a string. INITCAP() reformats any words by making the first letter (the initial letter) a capital letter, and all subsequent letters in the word, lower case. 
 */
 -- 🥋 Using a System Function to Fix a Variable Value
-set alternating_caps_phrase = 'sPoNgEbOb MeMe';
-select $alternating_caps_phrase;
+SET alternating_caps_phrase = 'sPoNgEbOb MeMe';
+SELECT $alternating_caps_phrase;
 
 /*
 📓  Alternating Caps - Neutralized!
@@ -119,23 +120,24 @@ The value returned should be in formatted so that the first letter of each word 
 Test your code and make sure it works, because on the next page, you'll need to prove it works!
 */
 
-use role sysadmin;
-create or replace function UTIL_DB.PUBLIC.NEUTRALIZE_WHINING (
-    v_input TEXT
+USE ROLE sysadmin;
+CREATE OR REPLACE FUNCTION UTIL_DB.PUBLIC.NEUTRALIZE_WHINING (
+  v_input TEXT
 )
-returns TEXT 
-as
+RETURNS TEXT 
+AS
 $$
 select initcap(v_input)
 $$
 ;
 
 -- Set your worksheet drop lists
-use UTIL_DB.PUBLIC;
+USE util_db.public;
 -- DO NOT EDIT ANYTHING BELOW THIS LINE
-select GRADER(step, (actual = expected), actual, expected, description) as graded_results from (
- SELECT 'DABW007' as step
- ,( select hash(neutralize_whining('bUt mOm i wAsHeD tHe dIsHes yEsTeRdAy'))) as actual
- , -4759027801154767056 as expected
- ,'WHINGE UDF Works' as description
+SELECT GRADER(step, (actual = expected), actual, expected, description) AS graded_results FROM (
+  SELECT
+    'DABW007' AS step,
+    ( SELECT HASH(NEUTRALIZE_WHINING('bUt mOm i wAsHeD tHe dIsHes yEsTeRdAy'))) AS actual,
+    -4759027801154767056 AS expected,
+    'WHINGE UDF Works' AS description
 );
